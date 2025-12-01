@@ -1,0 +1,49 @@
+stages:
+  - build
+
+variables:
+  REGISTRY_URL: "$CI_REGISTRY"
+  REGISTRY_IMAGE: "$CI_REGISTRY_IMAGE"
+  REGISTRY_USER: "$CI_REGISTRY_USER"
+  REGISTRY_PASSWORD: "$CI_REGISTRY_PASSWORD"
+  API_IMAGE_NAME: "$CI_REGISTRY_IMAGE/proptimus-api"
+  UI_IMAGE_NAME: "$CI_REGISTRY_IMAGE/proptimus-ui"
+  IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  PROD_TAG: "production"
+  UI_BUILD_ARG_APP_NAME: "Proptimus"
+  UI_BUILD_ARG_API_URL: "http://localhost:5000"
+
+.kaniko-auth: &kaniko-auth |
+  echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(printf '%s:%s' "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+
+build-production-images:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [""]
+  before_script:
+    - *kaniko-auth
+  script:
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/api/proptimus-api" \
+        --dockerfile Dockerfile \
+        --destination "${API_IMAGE_NAME}:${IMAGE_TAG}" \
+        --destination "${API_IMAGE_NAME}:${PROD_TAG}" \
+        --cache=true \
+        --cache-ttl=168h
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}/ui/proptimus-ui" \
+        --dockerfile Dockerfile \
+        --build-arg NEXT_PUBLIC_APP_NAME="${UI_BUILD_ARG_APP_NAME}" \
+        --build-arg NEXT_PUBLIC_API_URL="${UI_BUILD_ARG_API_URL}" \
+        --destination "${UI_IMAGE_NAME}:${IMAGE_TAG}" \
+        --destination "${UI_IMAGE_NAME}:${PROD_TAG}" \
+        --cache=true \
+        --cache-ttl=168h
+  after_script:
+    - rm -f /kaniko/.docker/config.json
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG

@@ -1,11 +1,80 @@
-# Python artifacts
-**/__pycache__/
+# Python
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 build/
-# Application artifacts
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+bun/
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+bun.lockb
+
+# Next.js
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Calculated structures (if you don't want to commit these)
+api/proptimus-api/app/calculated_structures/
+
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+app/examples
+app/calculated_structures/*
+app/logs.txt
+app/.idea/*
+
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
 develop-eggs/
 dist/
 downloads/
@@ -23,10 +92,18 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+
+# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -39,29 +116,59 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+
+# Translations
 *.mo
 *.pot
+
+# Django stuff:
+*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# Flask stuff:
 instance/
 .webassets-cache
+
+# Scrapy stuff:
 .scrapy
+
+# Sphinx documentation
 docs/_build/
+
+# PyBuilder
 target/
+
+# Jupyter Notebook
 .ipynb_checkpoints
+
+# IPython
 profile_default/
 ipython_config.py
+
+# pyenv
 .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
+
+# Celery stuff
 celerybeat-schedule
 celerybeat.pid
+
+# SageMath parsed files
 *.sage.py
 
 # Environments
 .env
-.env.local
-.env.*.local
 .venv
 env/
 venv/
@@ -69,68 +176,24 @@ ENV/
 env.bak/
 venv.bak/
 
-# JavaScript / frontend tooling
-.bun/
-/bun/
-bun/
-.npm/
-.pnpm-store/
-bun.lock
-bun.lockb
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-.eslintcache
-.stylelintcache
-.turbo/
-.parcel-cache/
-.rollup.cache/
-.vite/
-.vite-deps/
-.wireit/
-.webpack/
-.swc/
-.sass-cache/
-.angular/
-.nuxt/
-.svelte-kit/
-.expo/
-.vercel/
-.docusaurus/
-.netlify/
-.solid-cache/
-.storybook-out/
-.cache/
-.next/
-out/
-coverage/
-storybook-static/
-.coverage*
-report.[0-9]*.json
-*.tsbuildinfo
-
-# Logs
-*.log
-logs/
-api/FFFold/app/logs.txt
-
-# Application artifacts
-api/FFFold/app/examples/
-api/FFFold/app/calculated_structures/
-api/FFFold/app/.idea/
-
-# IDE and editor config
-.devcontainer
-.vscode/
-.idea/
+# Spyder project settings
 .spyderproject
 .spyproject
-.ropeproject
-*.swp
-*.swo
 
-# OS files
-.DS_Store
-Thumbs.db
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+.devcontainer
+.vscode
+
