@@ -1,0 +1,22 @@
+node_modules
+.next
+.git
+*.md
+!README.md
+.env*.local
+.DS_Store
+*.log
+.vscode
+.idea
+coverage
+dist
+build
+out
+.turbo
+.vercel
+Dockerfile
+.dockerignore
+docker-compose.yml
+# Exclude any tsx/ts files accidentally placed in public
+public/**/*.tsx
+public/**/*.ts

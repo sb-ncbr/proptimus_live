@@ -1,0 +1,187 @@
+import ProteinLink from "./ProteinLink";
+import { MSWrapper } from "../visualizations";
+import { Card, CardContent } from "../ui/card";
+import Image from "next/image";
+import times from "../../public/assets/about/times.svg";
+import histogram from "../../public/assets/about/histogram.svg";
+import schema from "../../public/assets/about/schema.svg";
+
+interface Protein {
+  id: number;
+  name: string;
+  uniprotId: string;
+  description: string;
+  fullDescription?: string;
+}
+
+interface ProteinShowcaseItemProps {
+  protein: Protein;
+  isReversed: boolean;
+}
+
+function ProteinShowcaseItem({
+  protein,
+  isReversed,
+}: ProteinShowcaseItemProps) {
+  const dummyPdbData = `
+HEADER    DUMMY PDB FOR TESTING
+ATOM      1  N   ALA A   1      27.230  13.467  27.258  1.00  0.00           N
+ATOM      2  CA  ALA A   1      26.060  14.262  27.038  1.00  0.00           C
+ATOM      3  C   ALA A   1      26.445  15.631  26.508  1.00  0.00           C
+ATOM      4  O   ALA A   1      27.510  15.823  26.051  1.00  0.00           O
+ATOM      5  CB  ALA A   1      24.853  13.639  27.758  1.00  0.00           C
+ATOM      6  N   GLY A   2      25.599  16.618  26.563  1.00  0.00           N
+ATOM      7  CA  GLY A   2      25.828  17.948  26.065  1.00  0.00           C
+ATOM      8  C   GLY A   2      24.688  18.788  26.530  1.00  0.00           C
+ATOM      9  O   GLY A   2      23.656  18.336  26.889  1.00  0.00           O
+TER
+END
+`;
+  const createFileFromData = (data: string, filename: string): File => {
+    const blob = new Blob([data], { type: "chemical/x-pdb" }); // Correct MIME type for PDB
+    return new File([blob], filename, { type: "chemical/x-pdb" });
+  };
+  return (
+    <div
+      className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-16 py-8 ${isReversed ? "lg:flex-row-reverse" : ""}`}
+    >
+      {/* Canvas Side */}
+      <div className="w-full lg:w-1/2">
+        <div className="relative rounded-2xl shadow-xl border overflow-hidden">
+          <div className="w-full h-80 lg:h-96 flex items-center justify-center">
+            <Card>
+              <CardContent className="bg-white">
+                <Image src={schema} alt="Schema" className="" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Side */}
+      <div className="w-full lg:w-1/2">
+        <div className="space-y-6 py-4">
+          <div>
+            <h3 className="text-3xl lg:text-4xl font-bold text-secondary mb-2">
+              <ProteinLink
+                href={`/protein/${protein.uniprotId}`}
+                className="hover:text-primary transition-colors duration-300"
+              >
+                {protein.name}
+              </ProteinLink>
+            </h3>
+            <p className="text-lg text-gray-500 font-mono bg-gray-100 px-3 py-1 rounded-lg inline-block">
+              UniProt: {protein.uniprotId}
+            </p>
+          </div>
+
+          <div className="prose prose-gray max-w-none">
+            <p className="text-gray-600 leading-relaxed text-lg">
+              {protein.fullDescription || protein.description}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <ProteinLink
+              href={`/protein/${protein.uniprotId}`}
+              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all duration-200 font-medium"
+            >
+              View Structure
+              <svg
+                className="ml-2 w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="External link"
+                role="img"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </ProteinLink>
+            <a
+              href={`https://www.uniprot.org/uniprot/${protein.uniprotId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+            >
+              UniProt Entry
+              <svg
+                className="ml-2 w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="External link"
+                role="img"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ProteinShowcase(): React.JSX.Element {
+  const featuredProteins = [
+    {
+      id: 1,
+      name: "How does it work?",
+      uniprotId: "Q813H7",
+      description:
+        "May protect the malaria parasite against attack by the immune system. Mean pLDDT 85.57.",
+      fullDescription:
+        "PROPTIMUS WEB optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide- and - conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN - Force - Field, designed to combine high force - field speed with the accuracy of QM methods.",
+    },
+    {
+      id: 2,
+      name: "Hemoglobin Alpha Chain",
+      uniprotId: "P69905",
+      description: "Oxygen-carrying protein found in red blood cells.",
+      fullDescription:
+        "The alpha chain of hemoglobin is essential for oxygen transport throughout the body. This tetrameric protein forms the core of red blood cells and enables efficient oxygen delivery from the lungs to tissues. Its unique structure allows for cooperative oxygen binding and release.",
+    },
+    {
+      id: 3,
+      name: "Human Insulin",
+      uniprotId: "P01308",
+      description: "Hormone that regulates blood glucose levels.",
+      fullDescription:
+        "Human insulin is a critical hormone produced by pancreatic beta cells that regulates glucose metabolism. This protein hormone facilitates cellular glucose uptake and promotes glycogen synthesis, playing an essential role in maintaining proper blood sugar levels and energy homeostasis.",
+    },
+  ];
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 py-16">
+      <div className="text-center mb-16">
+        <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
+          About our optimisation method
+        </h2>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Explore some of the proteins that have been successfully optimized.
+        </p>
+      </div>
+
+      <div className="space-y-40">
+        {featuredProteins.map((protein, index) => (
+          <ProteinShowcaseItem
+            key={protein.id}
+            protein={protein}
+            isReversed={index % 2 === 1}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,45 @@
+version: '3.8'
+
+networks:
+  fffold-network:
+    driver: bridge
+
+services:
+  fffold-api:
+    build:
+      context: ./api/FFFold
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=routes.py
+      - CORS_ORIGINS=http://localhost:3000,http://fffold-ui:3000
+    volumes:
+      - ./api/FFFold/app/calculated_structures:/app/app/calculated_structures
+    networks:
+      - fffold-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  fffold-ui:
+    build:
+      context: ./ui/fffold
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: "FFFold"
+        NEXT_PUBLIC_API_URL: "http://localhost:5000"
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_APP_NAME=FFFold
+      - NEXT_PUBLIC_API_URL=http://fffold-api:5000
+    depends_on:
+      - fffold-api
+    networks:
+      - fffold-network
+    restart: unless-stopped
