@@ -42,7 +42,7 @@ def create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code
     structure.assign_label_seq_id()
     block = structure.make_mmcif_block()
     block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
+    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.cif')
     with open(original_CIF_file, 'w') as cif_file:
         cif_file.write(response.text)
     document = gemmi.cif.read_string(response.text)
@@ -102,7 +102,6 @@ def job_status(ID: str):
 def main_site():
 
     if request.method == 'POST':
-
         # load user input
         code = request.form['code'].strip().upper()  # UniProt code, not case-sensitive
         code = code.replace("AF-","").replace("-F1", "")  # Also AlphaFold DB identifiers are supproted (e.g. AF-A8H2R3-F1)
@@ -132,7 +131,7 @@ def main_site():
         elif status == "unsubmitted":
 
             # download pdb
-            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.pdb')
+            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
             if response.status_code != 200:
                 flash(Markup(f'The structure with code <strong>{code}</strong> '
                              f'is either not found in AlphaFold DB or the code is entered in the wrong format. '
