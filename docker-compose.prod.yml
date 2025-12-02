@@ -8,7 +8,7 @@ services:
       - FLASK_APP=routes.py
       - CORS_ORIGINS=http://147.251.245.48,http://147.251.245.48:5000,http://localhost:3000,http://localhost:5000
     volumes:
-      - ./calculated_structures:/app/app/calculated_structures
+      - ./api/proptimus-api/app/calculated_structures:/app/app/calculated_structures
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
