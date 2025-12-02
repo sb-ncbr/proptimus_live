@@ -144,9 +144,16 @@ def main_site():
                                 "queued": len(queue),
                                 "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
             data_dir = f'{root_dir}/calculated_structures/{ID}'
-            os.mkdir(data_dir)
-            with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-                pdb.write(response.text)
+            try:
+                os.mkdir(data_dir)
+                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
+                    pdb.write(response.text)
+            except (OSError, PermissionError) as e:
+                print(f"ERROR: Failed to create directory or write file: {e}")
+                flash(Markup(f'Server error: Unable to create job directory. Please contact administrator.'), 'danger')
+                return jsonify({"error": "Permission denied",
+                                "running": len(running),
+                                "queued": len(queue)})
 
             # create and submit job
             global optimisers
