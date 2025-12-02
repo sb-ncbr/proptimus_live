@@ -6,7 +6,7 @@ services:
     environment:
       - FLASK_ENV=production
       - FLASK_APP=routes.py
-      - CORS_ORIGINS=http://147.251.245.48,http://localhost:3000
+      - CORS_ORIGINS=http://147.251.245.48,http://147.251.245.48:5000,http://localhost:3000,http://localhost:5000
     volumes:
       - ./calculated_structures:/app/app/calculated_structures
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
       - "80:3000"
     environment:
       - NEXT_PUBLIC_APP_NAME=Proptimus
-      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_API_URL=http://147.251.245.48:5000
     depends_on:
       - proptimus-api
     restart: unless-stopped

@@ -19,7 +19,7 @@ cors_config = {
     "origins": os.environ.get('CORS_ORIGINS', 'http://147.251.245.48,http://localhost:3000').split(','),
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization", "Accept"],
-    "supports_credentials": True,
+    "supports_credentials": False,
     "max_age": 3600
 }
 CORS(application, resources={r"/*": cors_config})
