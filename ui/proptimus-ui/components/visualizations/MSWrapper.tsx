@@ -325,7 +325,7 @@ class MolStarViewerManager {
                 type: "ball_and_stick",
                 ...(typeof protein.structure !== "string"
                   ? {
-                    size_factor: 0.2,
+                    size_factor: 0.4,
                   }
                   : {}),
               },

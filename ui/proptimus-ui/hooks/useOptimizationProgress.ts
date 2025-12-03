@@ -20,8 +20,9 @@ export function useOptimizationProgress(jobId: string) {
       
       // Transform the response to our expected format
       return {
-        status: data.status === 'finished' ? 'finished' : 'running',
-        progress: data.percent_value || 0,
+        status: data.status === 'finished' ? 'finished' : 
+                data.status === 'queued' || data.status === 'unsubmitted' ? 'running' : 'running',
+        progress: data.percent_value !== undefined ? data.percent_value : 0,
         message: data.percent_text || data.message,
         error: data.error
       };
