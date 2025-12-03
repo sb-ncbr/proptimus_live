@@ -8,8 +8,10 @@ services:
       - FLASK_APP=routes.py
       - CORS_ORIGINS=http://147.251.245.48,http://147.251.245.48:5000,http://localhost:3000,http://localhost:5000
     volumes:
-      - ./calculated_structures:/app/app/calculated_structures:rw
+      - ./api/proptimus-api/app/calculated_structures:/app/app/calculated_structures:rw
     restart: unless-stopped
+    command: >
+      bash -c "chmod 777 /app/app/calculated_structures && flask run --host=0.0.0.0 --port=5000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
