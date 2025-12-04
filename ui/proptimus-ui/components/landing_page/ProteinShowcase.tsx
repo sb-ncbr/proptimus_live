@@ -29,9 +29,9 @@ function ProteinShowcaseItem({
       className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-16 py-8 ${isReversed ? "lg:flex-row-reverse" : ""}`}
     >
       {/* Canvas Side */}
-      <div className="w-full lg:w-1/2">
+      <div className="w-full lg:w-[57%]">
         <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          <div className="w-full h-80 lg:h-96 flex items-center justify-center bg-white">
+          <div className="w-full h-80 lg:h-108 flex items-center justify-center bg-white">
             <Image
               src={protein.imageSrc}
               alt={protein.name}
@@ -42,7 +42,7 @@ function ProteinShowcaseItem({
       </div>
 
       {/* Content Side */}
-      <div className="w-full lg:w-1/2">
+      <div className="w-full lg:w-[43%]">
         <div className="space-y-6 py-4">
           <div>
             <h3 className="text-3xl lg:text-4xl font-bold text-secondary mb-2">
@@ -93,9 +93,9 @@ export default function ProteinShowcase(): React.JSX.Element {
       name: "How does it work?",
       uniprotId: "schema",
       description:
-        "PROPTIMUS WEB optimises protein structures using the RAPHAN method.",
+        "PROPTIMus LIVE optimises protein structures using the RAPHAN method.",
       fullDescription:
-        "PROPTIMUS WEB optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
+        "PROPTIMus LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
       imageSrc: schema,
       documentationHref: "/manual",
     },
@@ -115,7 +115,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       uniprotId: "times",
       description: "RAPHAN optimises proteins in minutes.",
       fullDescription:
-        "A lot. While the duration of optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS WEB optimises average proteins in a matter of minutes.",
+        "A lot. While the duration of optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMus LIVE optimises average proteins in a matter of minutes.",
       imageSrc: times,
       documentationHref: "/manual",
     },
@@ -128,7 +128,7 @@ export default function ProteinShowcase(): React.JSX.Element {
           About our optimisation method
         </h2>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Explore some of the proteins that have been successfully optimized.
+          Explore our method for fast and accurate protein structure optimisation.
         </p>
       </div>
 

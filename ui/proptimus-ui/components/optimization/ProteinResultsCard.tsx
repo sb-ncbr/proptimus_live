@@ -16,7 +16,7 @@ interface ResultsData {
     running: number;
 }
 
-export default function ProteinResultsCard({ className = "" }: ProteinResultsCardProps) {
+export default function ProteinResultsCard({ className = "", compact = false }: ProteinResultsCardProps & { compact?: boolean }) {
     const { data, isLoading, error } = useResultsStats();
 
     // Parse the results data if it's a JSON string
@@ -66,6 +66,27 @@ export default function ProteinResultsCard({ className = "" }: ProteinResultsCar
         );
     }
 
+    // Compact mobile version
+    if (compact) {
+        return (
+            <div className={cn("flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1.5 shadow-md", className)}>
+                <div className="flex items-center gap-1" title="Calculated">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-xs font-semibold text-gray-900">{results.calculated}</span>
+                </div>
+                <div className="flex items-center gap-1" title="Queued">
+                    <Clock className="h-4 w-4 text-yellow-600" />
+                    <span className="text-xs font-semibold text-gray-900">{results.queued}</span>
+                </div>
+                <div className="flex items-center gap-1" title="Running">
+                    <Play className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-gray-900">{results.running}</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Full desktop version
     return (
         <Card className={cn("w-56", className)}>
             <CardHeader>

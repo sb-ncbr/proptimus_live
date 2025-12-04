@@ -9,10 +9,16 @@ export default function HeroImage(): React.JSX.Element {
   const firstTwo = name.slice(0, 2);
   const rest = name.slice(2);
   return (
-    <div id="hero" className="relative w-full h-80 lg:h-180 overflow-hidden">
+    <div id="hero" className="relative w-full h-[600px] sm:h-[700px] lg:h-180 overflow-hidden">
       {/* Background gradient with scientific pattern */}
-      <div className="absolute top-4 right-4 z-5">
-        <ProteinResultsCard />
+      {/* Desktop: Full card, Mobile: Compact version */}
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
+        <div className="block lg:hidden">
+          <ProteinResultsCard compact={true} />
+        </div>
+        <div className="hidden lg:block">
+          <ProteinResultsCard />
+        </div>
       </div>
 
       <div className="absolute inset-0 bg-gradient-to-r from-white [color-stop:15%] via-secondary/80 [color-stop:85%] to-primary-700/60">
@@ -29,16 +35,20 @@ export default function HeroImage(): React.JSX.Element {
       </div>
 
       {/* Content overlay */}
-      <div className="relative z-10 h-full flex items-center justify-center">
-        <div className="text-center text-white space-y-6">
-          <h1 className="text-4xl lg:text-7xl font-bold mb-4 pb-10 ">
+      <div className="relative z-10 h-full flex items-center justify-center px-4">
+        <div className="text-center text-white space-y-3 sm:space-y-6 max-w-6xl w-full">
+          <h1 className="text-3xl sm:text-4xl lg:text-7xl font-bold">
             <span className="text-secondary">{firstTwo}</span>
             <span className="silver-shimmer">
               {rest}
             </span>
           </h1>
-
-          <p className="text-xl lg:text-4xl text-white/90 max-w-5xl mx-auto silver-text">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold mb-2 sm:mb-4 pb-4 sm:pb-10">
+            <span className="silver-shimmer animate-pulse">
+              LIVE
+            </span>
+          </h1>
+          <p className="text-base sm:text-xl lg:text-4xl text-white/90 max-w-5xl mx-auto silver-text px-2">
             <h1>
               {config.app.hero.split('<br/>').map((line, i) => (
                 <React.Fragment key={i}>
@@ -48,15 +58,19 @@ export default function HeroImage(): React.JSX.Element {
               ))}
             </h1>
           </p>
-          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto w-full text-xl justify-items-center items-center mt-8 ">
-            <div className="flex items-center gap-2 col-span-1 text-dark-silver">
-              <ChevronsUp className="w-7 h-7" /> Fast
+
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto w-full text-sm sm:text-lg lg:text-xl justify-items-center items-center mt-4 sm:mt-8">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 col-span-1 text-dark-silver">
+              <ChevronsUp className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+              <span className="text-xs sm:text-base lg:text-xl">Fast</span>
             </div>
-            <div className="flex items-center gap-2 col-span-1 text-dark-silver">
-              <LocateFixed className="w-7 h-7" /> Accurate
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 col-span-1 text-dark-silver">
+              <LocateFixed className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+              <span className="text-xs sm:text-base lg:text-xl">Accurate</span>
             </div>
-            <div className="flex items-center gap-2 col-span-1 text-dark-silver">
-              <BadgeCheck className="w-7 h-7" /> Free
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 col-span-1 text-dark-silver">
+              <BadgeCheck className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+              <span className="text-xs sm:text-base lg:text-xl">Free</span>
             </div>
           </div>
           <UniprotInputSection />

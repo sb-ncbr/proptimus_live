@@ -11,7 +11,7 @@ export default function Footer(): React.JSX.Element {
           {/* Partners */}
           <div className="md:col-span-2">
             <h3 className="text-xl font-semibold mb-6">Collaboration</h3>
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-5 gap-6">
               <a
                 href="https://www.muni.cz/"
                 target="_blank"
@@ -58,14 +58,29 @@ export default function Footer(): React.JSX.Element {
                 href="https://www.elixir-czech.cz/services"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center justify-center p-2 transition-transform duration-300 hover:scale-110"
+                className="group flex items-center justify-center p-2 transition-transform duration-300 bg-white rounded-lg hover:scale-110"
               >
-                <div className="text-center">
-                  <div className="text-lg font-bold text-white mb-1 group-hover:text-primary transition-colors duration-300">
-                    ELIXIR
-                  </div>
-                  <div className="text-xs text-gray-300">Research Group</div>
-                </div>
+                <Image
+                  src="/assets/img/elixir_logo.webp"
+                  alt="MUNI Institute of Computer Science"
+                  width={80}
+                  height={60}
+                  className="object-contain"
+                />
+              </a>
+              <a
+                href="https://www.cesnet.cz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-center p-2 transition-transform duration-300 bg-white rounded-lg hover:scale-110"
+              >
+                <Image
+                  src="/assets/img/cesnet_RGB.svg"
+                  alt="MUNI Institute of Computer Science"
+                  width={100}
+                  height={80}
+                  className="object-contain"
+                />
               </a>
             </div>
           </div>
@@ -131,7 +146,8 @@ export default function Footer(): React.JSX.Element {
             <div>
               <span className="text-white font-semibold text-4xl">PR</span>
               <span className="dark-silver-text text-4xl font-bold">
-                OPTIMus
+                OPTIMus <br />
+                LIVE
               </span>
             </div>
 
@@ -143,7 +159,6 @@ export default function Footer(): React.JSX.Element {
           </div>
           <div className="text-center md:text-right space-y-2">
             {/* Links Section */}
-            <FooterLinks />
             <p className="text-sm text-gray-400">
               © 2023-{new Date().getFullYear()} {config.app.name}. All rights
               reserved.
