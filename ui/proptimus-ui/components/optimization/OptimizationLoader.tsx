@@ -37,7 +37,7 @@ export function OptimizationLoader({
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center space-y-8 p-8 ${className}`}>
+    <div className={`flex flex-col items-center justify-center space-y-8 p-8 animate-in fade-in duration-300 ${className}`}>
       {/* Animation */}
       <div className="relative">
         <ProteinOptimizationAnimation />

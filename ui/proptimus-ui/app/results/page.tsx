@@ -130,7 +130,8 @@ function ResultsContent() {
   }
 
   // Show loading animation while optimization is running or loading
-  if (progressLoading || !progressData || progressData.status === "running") {
+  // Don't show loading screen if we're just refetching and already have finished data
+  if ((progressLoading && !progressData) || (progressData && progressData.status === "running")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <OptimizationLoader
@@ -173,7 +174,7 @@ function ResultsContent() {
 
   // Show results when everything is loaded
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 animate-in fade-in duration-500">
       <Header />
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 mt-8">

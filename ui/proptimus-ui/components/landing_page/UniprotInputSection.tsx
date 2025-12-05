@@ -9,12 +9,14 @@ import { useSubmitJob } from "../../hooks/useProptimusApi";
 import useInputHinting from "../../hooks/useInputQueryHinting";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "../../lib/utils";
 
 const UniprotInputSection: React.FC = () => {
     const [code, setCode] = useState("");
     const [ph, setPh] = useState("7.0");
     const [file, setFile] = useState<File | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,9 +49,47 @@ const UniprotInputSection: React.FC = () => {
         }
     }, [submitJob.isSuccess, submitJob.data, file, code, ph, router]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if ((!code && !file) || !ph) return;
+
+        // Check if optimization already exists before submitting
+        if (code && ph && !file) {
+            const jobId = `${code}_${ph}`;
+            setIsChecking(true);
+
+            try {
+                const res = await apiFetch(`/api/running_progress?ID=${encodeURIComponent(jobId)}`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // If already finished, redirect immediately
+                    if (data.status === 'finished') {
+                        toast.success("Optimization already complete! Redirecting...");
+                        setTimeout(() => {
+                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                        }, 1000);
+                        setIsChecking(false);
+                        return;
+                    }
+
+                    // If running or queued, redirect to progress page
+                    if (data.status === 'running' || data.status === 'queued') {
+                        toast.info("Optimization already in progress! Redirecting...");
+                        setTimeout(() => {
+                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                        }, 1000);
+                        setIsChecking(false);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log("Job doesn't exist yet, submitting new job");
+            }
+            setIsChecking(false);
+        }
+
+        // Submit new job if not already finished
         submitJob.mutate({ file, code, ph });
     };
 
@@ -187,8 +227,13 @@ const UniprotInputSection: React.FC = () => {
                     </div>
                 </div>
                 <div className="mt-8 flex justify-center">
-                    <Button size="xxl" className="text-lg px-8 py-4" type="submit" disabled={submitJob.isPending}>
-                        {submitJob.isPending ? "Submitting..." : "Start Optimisation"}
+                    <Button
+                        size="xxl"
+                        className="text-lg px-8 py-4"
+                        type="submit"
+                        disabled={submitJob.isPending || isChecking}
+                    >
+                        {isChecking ? "Checking..." : submitJob.isPending ? "Submitting..." : "Start Optimisation"}
                     </Button>
                 </div>
             </form>

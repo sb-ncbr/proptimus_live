@@ -119,7 +119,7 @@ export function ProteinComparison({
                     <div className="h-full border rounded-lg overflow-hidden">
                         <MSWrapper
                             proteins={[originalProteinForOverlay, optimizedProteinForOverlay]}
-                            height={600}
+                            height={800}
                             showUI={true}
                             bgColor="#ffffff"
                         />
