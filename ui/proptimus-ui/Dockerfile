@@ -50,10 +50,10 @@ COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
 # Create .next directory with proper permissions for cache
 RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next
 
-EXPOSE 3000
+EXPOSE 80
 
 ENV HOSTNAME="0.0.0.0"
-ENV PORT=3000
+ENV PORT=80
 
 # Runtime environment variables with placeholders
 ENV NEXT_PUBLIC_APP_NAME="NEXT_PUBLIC_APP_NAME_PLACEHOLDER"

@@ -12,7 +12,7 @@ variables:
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   PROD_TAG: "production"
   UI_BUILD_ARG_APP_NAME: "Proptimus"
-  UI_BUILD_ARG_API_URL: "https://proptimus.ceitec.cz:5000"
+  UI_BUILD_ARG_API_URL: "http://proptimus.ceitec.cz:80"
 
 .kaniko-auth: &kaniko-auth |
   echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(printf '%s:%s' "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json

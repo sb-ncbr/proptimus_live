@@ -51,7 +51,7 @@ ENV PYTHONUNBUFFERED=1
 ENV XTB_PATH=/opt/miniconda3/bin/xtb
 ENV OBABEL_PATH=/opt/miniconda3/bin/obabel
 
-EXPOSE 5000
+EXPOSE 80
 
 # Run Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=80"]
