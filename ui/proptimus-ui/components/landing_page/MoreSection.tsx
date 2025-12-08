@@ -7,7 +7,7 @@ export default function MoreSection(): React.JSX.Element {
     { href: "/documentation", label: "Documentation" },
     { href: "/api", label: "API Access" },
     { href: "/downloads", label: "Downloads" },
-    { href: "/about", label: "About PROPTIMus" },
+    { href: "/about", label: "About PROPTIMUS" },
     { href: "/contact", label: "Contact Us" },
     { href: "/news", label: "Latest News" },
   ];

@@ -21,6 +21,7 @@ import { HardDriveDownload } from "lucide-react";
 function ResultsContent() {
   const searchParams = useSearchParams();
   const jobId = searchParams.get("query");
+  const [showLoader, setShowLoader] = React.useState(false);
 
   // Parse job ID to extract UniProt ID and pH value
   const [uniprotId, phValue] = jobId ? jobId.split('_') : ['', ''];
@@ -56,6 +57,15 @@ function ResultsContent() {
     error: downloadError,
     refetch: downloadFiles,
   } = useDownloadFiles(jobId || "", { enabled: false });
+
+  // Delay showing loader by 500ms to prevent flash for quick loads
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoader(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Handle download
   const handleDownload = async () => {
@@ -132,18 +142,21 @@ function ResultsContent() {
   // Show loading animation while optimization is running or loading
   // Don't show loading screen if we're just refetching and already have finished data
   if ((progressLoading && !progressData) || (progressData && progressData.status === "running")) {
+    if (!showLoader) {
+      return null; // Don't show anything for the first 500ms
+    }
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 animate-in fade-in duration-300">
         <OptimizationLoader
           progress={progressData?.progress ?? 0}
           status={progressData?.status || "running"}
           message={progressData?.message}
+
         />
       </div>
     );
-  }
-
-  // Handle PDB data loading errors
+  }  // Handle PDB data loading errors
   if (originalError || optimizedError) {
     return (
       <div className="min-h-screen flex items-center justify-center">

@@ -90,7 +90,7 @@ export default function ProteinResultsCard({ className = "", compact = false }: 
     return (
         <Card className={cn("w-56", className)}>
             <CardHeader>
-                <CardTitle className="text-sm font-medium">Job Status</CardTitle>
+                <CardTitle className="text-sm font-medium">Job Statistics</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="space-y-3">
