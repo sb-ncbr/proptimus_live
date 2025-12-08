@@ -93,9 +93,9 @@ export default function ProteinShowcase(): React.JSX.Element {
       name: "How does it work?",
       uniprotId: "schema",
       description:
-        "PROPTIMus LIVE optimises protein structures using the RAPHAN method.",
+        "PROPTIMUS LIVE optimises protein structures using the RAPHAN method.",
       fullDescription:
-        "PROPTIMus LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
+        "PROPTIMUS LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
       imageSrc: schema,
       documentationHref: "/manual",
     },
@@ -115,7 +115,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       uniprotId: "times",
       description: "RAPHAN optimises proteins in minutes.",
       fullDescription:
-        "A lot. While the duration of optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMus LIVE optimises average proteins in a matter of minutes.",
+        "A lot. While the duration of optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes.",
       imageSrc: times,
       documentationHref: "/manual",
     },

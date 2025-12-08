@@ -20,14 +20,14 @@ export default function DescriptionSection(): React.JSX.Element {
           </span>
         </h2>
         <p className="text-lg text-gray-700 text-center leading-relaxed mb-8">
-          PROPTIMus LIVE is a freely available application for the local optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
+          PROPTIMUS LIVE is a freely available application for the local optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
           to reproduce protein structures <br /> optimised with constrained α-carbons.
 
         </p>
 
         <div className="grid md:grid-cols-2 gap-8">
           <Card className="p-6 m-2 transition hover:shadow-lg transition-shadow duration-200 ease-out">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-3">How PROPTIMus LIVE works</h3>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-3">How PROPTIMUS LIVE works</h3>
             <div className="pl-1 text-gray-700 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
@@ -53,7 +53,7 @@ export default function DescriptionSection(): React.JSX.Element {
           </Card>
 
           <Card className="p-6 m-2 hover:shadow-lg transition-shadow duration-200 ease-out">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-3">Why use PROPTIMus LIVE</h3>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-3">Why use PROPTIMUS LIVE</h3>
             <div className="pl-1 text-gray-700 space-y-7">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">

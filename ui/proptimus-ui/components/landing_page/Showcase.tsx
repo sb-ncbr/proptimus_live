@@ -39,7 +39,7 @@ export default function Showcase(): React.JSX.Element {
           Examples
         </h2>
         <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-          Examples of structure improvements are from the structure with Uniprot AC A4QBG9. The original structure from AlphaFold DB is shown in grey, and the structure optimised by PROPTIMus LIVE is in colour.
+          Examples of structure improvements are from the structure with Uniprot AC A4QBG9. The original structure from AlphaFold DB is shown in grey, and the structure optimised by PROPTIMUS LIVE is in colour.
         </p>
       </div>
 

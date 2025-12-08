@@ -128,7 +128,7 @@ export default function Footer(): React.JSX.Element {
 
         {/* Bottom Section - App Info and Copyright */}
         <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-          <div className="flex items-center space-x-3">
+          <div className="sm:flex-row lg:flex items-center space-x-3">
             <div>
               <span className="text-white font-semibold text-4xl">PR</span>
               <span className="dark-silver-text text-4xl font-bold">
@@ -138,7 +138,7 @@ export default function Footer(): React.JSX.Element {
             </div>
 
             <div className="ml-4">
-              <p className="text-gray-400 text-sm max-w-4xl">
+              <p className="text-gray-400 text-sm max-w-4xl mt-4 lg:mt-0">
                 {config.meta.description}
               </p>
             </div>
