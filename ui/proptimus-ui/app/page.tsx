@@ -20,7 +20,7 @@ export default function Home(): React.JSX.Element {
       <Showcase />
       <ProteinShowcase />
       <LicenseSection />
-      <Footer />
+
     </main>
   );
 }

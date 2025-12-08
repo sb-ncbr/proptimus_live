@@ -11,7 +11,7 @@ export default function Footer(): React.JSX.Element {
           {/* Partners */}
           <div className="md:col-span-2">
             <h3 className="text-xl font-semibold mb-6">Collaboration</h3>
-            <div className="grid grid-cols-5 gap-6">
+            <div className="grid grid-cols-4 gap-6">
               <a
                 href="https://www.muni.cz/"
                 target="_blank"
@@ -21,20 +21,6 @@ export default function Footer(): React.JSX.Element {
                 <Image
                   src="/assets/img/muni.png"
                   alt="Masaryk University"
-                  width={80}
-                  height={60}
-                  className="object-contain"
-                />
-              </a>
-              <a
-                href="https://www.fi.muni.cz/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center justify-center p-2 transition-transform duration-300 hover:scale-110 bg-white rounded-lg"
-              >
-                <Image
-                  src="/assets/img/muni_fi.png"
-                  alt="MUNI Faculty of Informatics"
                   width={80}
                   height={60}
                   className="object-contain"
@@ -160,7 +146,7 @@ export default function Footer(): React.JSX.Element {
           <div className="text-center md:text-right space-y-2">
             {/* Links Section */}
             <p className="text-sm text-gray-400">
-              © 2023-{new Date().getFullYear()} {config.app.name}. All rights
+              © {new Date().getFullYear()} {config.app.name}. All rights
               reserved.
             </p>
           </div>

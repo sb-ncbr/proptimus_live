@@ -154,7 +154,7 @@ const UniprotInputSection: React.FC = () => {
                             onChange={handleCodeChange}
                             onFocus={handleInputFocus}
                             onBlur={handleInputBlur}
-                            placeholder={file ? "" : "Enter UniProt ID e.g. P12345 or drop PDB file"}
+                            placeholder={file ? "" : "Enter UniProt ID or drop PDB file"}
                             className={`text-xl py-6 pl-12 pr-12 ${file ? "bg-gray-100 cursor-not-allowed" : ""}`}
                             disabled={!!file}
                         />

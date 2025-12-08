@@ -5,6 +5,7 @@ import { config, Config } from "@/config";
 import QueryProvider from "@/lib/providers/QueryProvider";
 import { Toaster } from "@/components/common/Sonner";
 import Script from "next/script";
+import { Footer } from "@/components/layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -103,6 +104,7 @@ export default function RootLayout({
           <main>
             {children}
           </main>
+          <Footer />
           <Toaster />
         </QueryProvider>
       </body>
