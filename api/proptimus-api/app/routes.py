@@ -36,33 +36,6 @@ number_of_processes = 1
 number_of_cpu = 6
 
 
-def create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code):
-    structure = gemmi.read_pdb(optimised_PDB_file)
-    structure.setup_entities()
-    structure.assign_label_seq_id()
-    block = structure.make_mmcif_block()
-    block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.cif')
-    with open(original_CIF_file, 'w') as cif_file:
-        cif_file.write(response.text)
-    document = gemmi.cif.read_string(response.text)
-    sole_block = document.sole_block()
-    ma_qa_metric_prefix = '_ma_qa_metric'
-    ma_qa_metric_local_prefix = '_ma_qa_metric_local'
-    ma_qa_metric_global_prefix = '_ma_qa_metric_global'
-    categories = {
-        ma_qa_metric_prefix: sole_block.get_mmcif_category(ma_qa_metric_prefix),
-        ma_qa_metric_local_prefix: sole_block.get_mmcif_category(ma_qa_metric_local_prefix),
-        ma_qa_metric_global_prefix: sole_block.get_mmcif_category(ma_qa_metric_global_prefix)
-    }
-    asym_id = block.get_mmcif_category('_struct_asym').get('id')[0]
-    length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
-    categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
-    for name, data in categories.items():
-        block.set_mmcif_category(name, data)
-    block.write_file(optimised_CIF_file)
-
-
 def optimise_structures():
     while len(queue):
         ID = queue.pop(0)
@@ -78,13 +51,11 @@ def optimise_structures():
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
         # optimise structure
-        Raphan(f"{data_dir}", pdb_file_with_hydrogens, number_of_cpu, True).optimise()
+        Raphan(data_dir=data_dir,
+               PDB_file=pdb_file_with_hydrogens,
+               cpu=number_of_cpu,
+               delete_auxiliary_files=True).optimise()
 
-        # create mmcif
-        optimised_PDB_file = f'{data_dir}/{code}_added_H_optimised.pdb'
-        optimised_CIF_file = f'{data_dir}/{code}_added_H_optimised.cif'
-        original_CIF_file = f'{data_dir}/{code}.cif'
-        create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code)
         running.remove(ID)
 
 
@@ -104,7 +75,7 @@ def main_site():
     if request.method == 'POST':
         # load user input
         code = request.form['code'].strip().upper()  # UniProt code, not case-sensitive
-        code = code.replace("AF-","").replace("-F1", "")  # Also AlphaFold DB identifiers are supproted (e.g. AF-A8H2R3-F1)
+        print(code)
         ph = request.form['ph']
         if "." not in ph:
             ph = ph + ".0"
@@ -123,7 +94,6 @@ def main_site():
             flash(Markup(f'Optimisation of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
                          f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
-            # return render_template('index.html', running=len(running), queued=len(queue))
             return jsonify({"running": len(running),
                             "queued": len(queue),
                             "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
@@ -138,7 +108,6 @@ def main_site():
                              f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                              f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
-                # return render_template('index.html', running=len(running), queued=len(queue))
                 return jsonify({"running": len(running),
                                 "queued": len(queue),
                                 "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
@@ -164,11 +133,9 @@ def main_site():
                 optimisers.append(optimiser)
             return redirect(url_for('results', ID=ID))
 
-    # return render_template('index.html', running=len(running), queued=len(queue))
     return jsonify({"running": len(running),
                     "queued": len(queue),
-                    "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
-
+                    "calculated": len(glob(f'{root_dir}/calculated_structures/*_*'))})
 
 
 @application.route('/results')
@@ -189,25 +156,14 @@ def results():
         return redirect(url_for('main_site'))
 
     if status == "queued":
-        # return render_template('queued.html',
-        #                        code=code,
-        #                        ph=ph)
         return jsonify({"code": code,
                         "ph": ph})
 
     elif status == "running":
-        # return render_template('running.html',
-        #                        ID=ID,
-        #                        code=code,
-        #                        ph=ph)
         return jsonify({"ID": ID,
                         "code": code,
                         "ph": ph})
 
-    # return render_template('results.html',
-    #                        ID=ID,
-    #                        code=code,
-    #                        ph=ph)
     return jsonify({"ID": ID,
                     "code": code,
                     "ph": ph})
@@ -259,15 +215,13 @@ def download_files():
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
         zip.write(f'{data_dir}/{code}_added_H_optimised.pdb',f'{code}_optimised.pdb')
-        zip.write(f'{data_dir}/{code}_added_H_optimised.cif', f'{code}_optimised.cif')
         zip.write(f'{data_dir}/{code}.pdb', f'{code}_original.pdb')
-        zip.write(f'{data_dir}/{code}.cif', f'{code}_original.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
 @application.route('/optimised_structure/<ID>')
 def get_optimised_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.cif'
+    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
@@ -285,5 +239,4 @@ def get_residues_logs(ID: str):
 
 @application.errorhandler(404)
 def page_not_found(error):
-    # return render_template('404.html'), 404
     return jsonify({})

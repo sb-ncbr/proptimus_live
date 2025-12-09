@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 from math import dist
 from multiprocessing import Pool
@@ -13,7 +14,7 @@ from rdkit import Chem
 
 
 def load_arguments():
-    print("\nParsing arguments... ", end="")
+    print("\nParsing arguments... ", end="", flush=True)
     parser = argparse.ArgumentParser()
     parser.add_argument('--PDB_file',
                         type=str,
@@ -28,14 +29,17 @@ def load_arguments():
                         required=False,
                         default=1,
                         help='How many CPUs should be used for the calculation.')
-    parser.add_argument('--run_full_xtb_optimisation',
+    parser.add_argument('--constrained_alpha_carbons_optimisations',
                         action="store_true",
-                        help='For testing the methodology. It also runs full xtb optimization with alpha carbons constrained.')
+                        help='For testing the methodology. '
+                             'The original structure and the PROPTIMUS RAPHANgfnff optimized structure will be optimized with constrained alpha carbons.'
+                             'Short comparison will be stored in <data_dir>/comparison.json. '
+                             'Please note that optimization with constrained alpha carbons is computationally expensive for larger protein structures.')
     parser.add_argument("--delete_auxiliary_files",
                         action="store_true",
                         help="Auxiliary calculation files can be large. With this argument, "
                              "the auxiliary files will be deleted during the calculation."
-                             "Do not use in combination with the argument --run_full_xtb_optimisation!")
+                             "Do not use in combination with the argument --constrained_alpha_carbons_optimisations!")
 
     args = parser.parse_args()
     if not path.isfile(args.PDB_file):
@@ -72,58 +76,73 @@ class Substructure_data:
         self.atoms_30A = atoms_30A
         self.data_dir = data_dir
         self.optimised_residue_index = optimised_residue_index
+        self.optimised_residue = optimised_residue
         self.archive = []
         self.converged = False
         self.io = io
 
-        self.optimised_atoms = []
+        self.optimised_atoms = set()
         for atom in optimised_residue:
             if atom.get_parent().id[1] == 1:  # in first residue optimise also -NH3 function group
-                self.optimised_atoms.append(atom)
+                self.optimised_atoms.add(atom)
             else:
                 if atom.name not in ["N", "H"]:
-                    self.optimised_atoms.append(atom)
-        for atom in ["N", "H"]: # add atoms from following bonded residue to optimise whole peptide bond
+                    self.optimised_atoms.add(atom)
+        for atom in ["N", "H"]:  # add atoms from following bonded residue to optimise whole peptide bond
             try:
-                self.optimised_atoms.append(structure[0]["A"][optimised_residue.id[1]+1][atom])
-            except KeyError: # because of last residue
+                self.optimised_atoms.add(structure[0]["A"][optimised_residue.id[1] + 1][atom])
+            except KeyError:  # because of last residue
                 break
+
+        self.final_optimised_atoms = set([atom for atom in optimised_residue])
 
 
 def optimise_substructure(substructure_data,
-                          iteration):
+                          iteration,
+                          phase):
+
+    if phase == "optimisation":
+        optimised_atoms = substructure_data.optimised_atoms
+        minimum_radius = 6
+        flexible_radius = 4
+        maximum_radius = 12
+    elif phase == "final refinement":
+        optimised_atoms = substructure_data.final_optimised_atoms
+        minimum_radius = 8
+        flexible_radius = 4
+        maximum_radius = 12
 
     # find effective neighbourhood
     kdtree = NeighborSearch(substructure_data.atoms_30A)
-    atoms_in_7A = []
-    atoms_in_12A = []
-    for optimised_residue_atom in substructure_data.optimised_atoms:
-        atoms_in_7A.extend(kdtree.search(center=optimised_residue_atom.coord,
-                                         radius=7,
-                                         level="A"))
-        atoms_in_12A.extend(kdtree.search(center=optimised_residue_atom.coord,
-                                         radius=12,
-                                         level="A"))
+    atoms_in_minimum_radius = []
+    atoms_in_maximum_radius = []
+    for optimised_residue_atom in optimised_atoms:
+        atoms_in_minimum_radius.extend(kdtree.search(center=optimised_residue_atom.coord,
+                                                     radius=minimum_radius,
+                                                     level="A"))
+        atoms_in_maximum_radius.extend(kdtree.search(center=optimised_residue_atom.coord,
+                                                     radius=maximum_radius,
+                                                     level="A"))
 
     # create pdb files to can load them with RDKit
     selector = AtomSelector()
-    selector.full_ids = set([atom.full_id for atom in atoms_in_7A])
-    selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_7A])
-    substructure_data.io.save(file=f"{substructure_data.data_dir}/atoms_in_7A.pdb",
+    selector.full_ids = set([atom.full_id for atom in atoms_in_minimum_radius])
+    selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_minimum_radius])
+    substructure_data.io.save(file=f"{substructure_data.data_dir}/atoms_in_minimum_radius.pdb",
                               select=selector,
                               preserve_atom_numbering=True)
-    selector.full_ids = set([atom.full_id for atom in atoms_in_12A])
-    selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_12A])
-    substructure_data.io.save(file=f"{substructure_data.data_dir}/atoms_in_12A.pdb",
+    selector.full_ids = set([atom.full_id for atom in atoms_in_maximum_radius])
+    selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_maximum_radius])
+    substructure_data.io.save(file=f"{substructure_data.data_dir}/atoms_in_maximum_radius.pdb",
                               select=selector,
                               preserve_atom_numbering=True)
 
     # load pdb files with RDKit
-    mol_min_radius = Chem.MolFromPDBFile(pdbFileName=f"{substructure_data.data_dir}/atoms_in_7A.pdb",
+    mol_min_radius = Chem.MolFromPDBFile(pdbFileName=f"{substructure_data.data_dir}/atoms_in_minimum_radius.pdb",
                                          removeHs=False,
                                          sanitize=False)
     mol_min_radius_conformer = mol_min_radius.GetConformer()
-    mol_max_radius = Chem.MolFromPDBFile(pdbFileName=f"{substructure_data.data_dir}/atoms_in_12A.pdb",
+    mol_max_radius = Chem.MolFromPDBFile(pdbFileName=f"{substructure_data.data_dir}/atoms_in_maximum_radius.pdb",
                                          removeHs=False,
                                          sanitize=False)
     mol_max_radius_conformer = mol_max_radius.GetConformer()
@@ -147,7 +166,7 @@ def optimise_substructure(substructure_data,
             atoms_with_broken_bonds.append(mol_max_radius_atom)
 
     # create a substructure that will have only C-C bonds broken
-    carbons_with_broken_bonds_coord = []  # hydrogens will be added only to these carbons
+    carbons_with_broken_bonds_coord = []
     substructure_coord_dict = mol_min_radius_coord_dict
     while atoms_with_broken_bonds:
         atom_with_broken_bonds = atoms_with_broken_bonds.pop(0)
@@ -158,8 +177,7 @@ def optimise_substructure(substructure_data,
                 continue
             else:
                 if atom_with_broken_bonds.GetSymbol() == "C" and bonded_atom.GetSymbol() == "C":
-                    carbons_with_broken_bonds_coord.append(
-                        mol_max_radius_conformer.GetAtomPosition(atom_with_broken_bonds.GetIdx()))
+                    carbons_with_broken_bonds_coord.append(mol_max_radius_conformer.GetAtomPosition(atom_with_broken_bonds.GetIdx()))
                     continue
                 else:
                     atoms_with_broken_bonds.append(bonded_atom)
@@ -190,9 +208,9 @@ def optimise_substructure(substructure_data,
                              start=1):
         if atom.name == "CA":
             atom.mode = "constrained"
-        elif atom in substructure_data.optimised_atoms:
+        elif atom in optimised_atoms:
             atom.mode = "optimised"
-        elif any(dist(atom.coord, ra.coord) < 4 for ra in substructure_data.optimised_atoms):
+        elif any(dist(atom.coord, ra.coord) < flexible_radius for ra in optimised_atoms):
             atom.mode = "flexible"
         else:
             atom.mode = "constrained"
@@ -214,7 +232,7 @@ def optimise_substructure(substructure_data,
     $end
     $opt
     maxcycle={len(optimised_atoms_indices)+iteration}
-    microcycle={len(optimised_atoms_indices)+iteration}
+    microcycle={len(optimised_atoms_indices)+iteration+1}
     $end
     """
     substructure_settings = xtb_settings_template.replace("xxx", ", ".join([str(i) for i in constrained_atoms_indices]))
@@ -228,15 +246,12 @@ def optimise_substructure(substructure_data,
                f"export OMP_NUM_THREADS=1,1 ;"
                f"export OMP_MAX_ACTIVE_LEVELS=1 ;"
                f"export MKL_NUM_THREADS=1 ;"
-               f"xtb substructure_{iteration}.pdb --gfnff --input xtb_settings_{iteration}.inp --opt vtight --alpb water --verbose > xtb_output_{iteration}.txt 2> xtb_error_output_{iteration}.txt   ; rm gfnff*")
+               f" xtb substructure_{iteration}.pdb --gfnff --input xtb_settings_{iteration}.inp --opt tight --alpb water --verbose > xtb_output_{iteration}.txt 2> xtb_error_output_{iteration}.txt ; rm gfnff*")
     system(run_xtb)
 
     # check xtb convergence
-    file_path = Path(f"{substructure_data.data_dir}/xtbopt.pdb")
-    xtb_converged = True
-    if not file_path.exists():
-        xtb_converged = False
-
+    if not Path(f"{substructure_data.data_dir}/xtbopt.pdb").exists():
+        return None, False, None
     system(f"cd {substructure_data.data_dir} ; mv xtbopt.log xtbopt_{iteration}.log ; mv xtbopt.pdb xtbopt_{iteration}.pdb")
 
     # superimpose original and optimised structures
@@ -264,7 +279,7 @@ def optimise_substructure(substructure_data,
             max_diffs.append(max(diffs))
         if any([x<0.01 for x in max_diffs]):
             raphan_converged = True
-    return optimised_coordinates, all([xtb_converged, raphan_converged]), substructure_data
+    return optimised_coordinates, raphan_converged, substructure_data
 
 
 class Raphan:
@@ -281,26 +296,46 @@ class Raphan:
     def optimise(self):
         self._load_molecule()
 
-        # optimise
         self.optimised_coordinates = [atom.coord for atom in self.structure.get_atoms()]
+        bar = tqdm.tqdm(total=100,
+                        desc="Structure optimisation",
+                        unit=" iteration")
         with Pool(self.cpu) as pool:
-            bar = tqdm.tqdm(total=50,
-                       desc="Structure optimisation",
-                       unit=" iteration")
-            max_iterations = 50
-            for iteration in range(1, max_iterations+1):
+            # optimisation
+            for iteration in range(1, 50):
                 bar.update(1)
-                iteration_results = pool.starmap(optimise_substructure, [(substructure, iteration) for substructure in self.substructures_data if not substructure.converged])
-                for optimised_coordinates, sc, substructure_data in iteration_results:
+                iteration_results = pool.starmap(optimise_substructure, [(substructure, iteration, "optimisation") for substructure in self.substructures_data if not substructure.converged])
+                for optimised_coordinates, convergence, substructure_data in iteration_results:
+                    if optimised_coordinates is None:  # xtb did not converge
+                        continue
                     for optimised_atom_index, optimised_atom_coordinates in optimised_coordinates:
                         self.optimised_coordinates[optimised_atom_index] = optimised_atom_coordinates
                     self.substructures_data[substructure_data.optimised_residue_index-1].archive.append([x[1] for x in optimised_coordinates])
-                    self.substructures_data[substructure_data.optimised_residue_index-1].converged = sc
+                    self.substructures_data[substructure_data.optimised_residue_index-1].converged = convergence
                 for atom, coord in zip(self.structure.get_atoms(), self.optimised_coordinates):
                     atom.coord = coord
                 self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised_{iteration}.pdb")
                 if all([substructure_data.converged for substructure_data in self.substructures_data]):
-                    bar.update(max_iterations - iteration)
+                    break
+
+            # final refinement
+            for substructure_data in self.substructures_data:
+                substructure_data.converged = False
+            for iteration in range(iteration+1, iteration + 51):
+                bar.update(1)
+                iteration_results = pool.starmap(optimise_substructure, [(substructure, iteration, "final refinement") for substructure in self.substructures_data if not substructure.converged])
+                for optimised_coordinates, convergence, substructure_data in iteration_results:
+                    if optimised_coordinates is None: # xtb did not converge
+                        continue
+                    for optimised_atom_index, optimised_atom_coordinates in optimised_coordinates:
+                        self.optimised_coordinates[optimised_atom_index] = optimised_atom_coordinates
+                    self.substructures_data[substructure_data.optimised_residue_index-1].archive.append([x[1] for x in optimised_coordinates])
+                    self.substructures_data[substructure_data.optimised_residue_index-1].converged = convergence
+                for atom, coord in zip(self.structure.get_atoms(), self.optimised_coordinates):
+                    atom.coord = coord
+                self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised_{iteration}.pdb")
+                if all([substructure_data.converged for substructure_data in self.substructures_data]):
+                    bar.update(100 - iteration)
                     bar.refresh()
                     break
             bar.close()
@@ -309,33 +344,24 @@ class Raphan:
             # control of unconverged residues
             unconverged_substructures = [str(substructure_data.optimised_residue_index) for substructure_data in self.substructures_data if not substructure_data.converged]
             if unconverged_substructures:
-                print(f"Warning! Optimisation for residues with indices {', '.join(unconverged_substructures)} did not converge!")
+                print(f"WARNING! OPTIMISATION FOR RESIDUE(S) WITH INDICE(S) {', '.join(unconverged_substructures)} DID NOT CONVERGE!")
 
-        print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb... ", end="")
+        print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb... ", end="", flush=True)
         self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb")
-        with open(f"{self.data_dir}/residues.logs", "w") as residues_logs:
-            logs = []
-            for i, residue in enumerate(self.structure.get_residues(), start=1):
-                logs.append({"residue index": i,
-                             "residue name": SeqUtils.IUPACData.protein_letters_3to1[residue.resname.capitalize()],
-                             "category": "Optimised residue"})
-
-
-            residues_logs.write(json.dumps(logs, indent=2))
         print("ok")
 
         if self.delete_auxiliary_files:
             print("Deleting auxiliary files...", end="")
             system(f"cd {self.data_dir};"
                    f"mv optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb .;"
-                   f"rm -r sub_* optimised_PDB inputed_PDB")
-            print(" ok")
-
+                   f"rm -r sub_* optimised_PDB input_PDB")
+            print("ok")
 
     def _load_molecule(self):
-        print(f"Loading of structure from {self.PDB_file}... ", end="")
+        print(f"Loading of structure from {self.PDB_file}... ", end="", flush=True)
 
         # open PDB file by Biopython
+        # TODO lepší try except, přidání vodíků pokud nejsou
         try:
             structure = PDBParser(QUIET=True).get_structure("structure", self.PDB_file)
             io = PDBIO()
@@ -361,16 +387,15 @@ class Raphan:
 
         # creation of data directories
         system(f"mkdir {self.data_dir};"
-               f"mkdir {self.data_dir}/inputed_PDB;"
+               f"mkdir {self.data_dir}/input_PDB;"
                f"mkdir {self.data_dir}/optimised_PDB;"
-               f"cp {self.PDB_file} {self.data_dir}/inputed_PDB")
+               f"cp {self.PDB_file} {self.data_dir}/input_PDB")
         for residue_number in range(1, len(list(self.structure.get_residues()))+1):
             system(f"mkdir {self.data_dir}/sub_{residue_number}")
         print("ok")
 
-
-def run_full_xtb_optimisation(raphan):
-    print("Running full xtb optimisation...", end="")
+def run_constrained_alpha_optimisations(raphan):
+    print("Running constrained alpha optimisation... ", end="", flush=True)
 
     # find alpha_carbons_indices to constrain them
     alpha_carbons_indices = []
@@ -379,89 +404,100 @@ def run_full_xtb_optimisation(raphan):
         if atom.name == "CA":
             alpha_carbons_indices.append(str(i))
 
-
-    # optimise original structure by xtb
-    system(f"mkdir {raphan.data_dir}/full_xtb_optimisation ")
-    system(f"mkdir {raphan.data_dir}/full_xtb_optimisation/original ")
-    with open(f"{raphan.data_dir}/full_xtb_optimisation/original/xtb_settings.inp", "w") as xtb_settings_file:
+    # optimise original structure
+    system(f"mkdir {raphan.data_dir}/constrained_alpha_carbons_optimisations ")
+    system(f"mkdir {raphan.data_dir}/constrained_alpha_carbons_optimisations/original ")
+    with open(f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/original/xtb_settings.inp", "w") as xtb_settings_file:
         xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {','.join(alpha_carbons_indices)}\n$end")
     t = time()
-    system(f"""cd {raphan.data_dir}/full_xtb_optimisation/original;
+    system(f"""cd {raphan.data_dir}/constrained_alpha_carbons_optimisations/original;
                export OMP_NUM_THREADS=1,1 ;
                export MKL_NUM_THREADS=1 ;
                export OMP_MAX_ACTIVE_LEVELS=1 ;
-               export OMP_STACKSIZE=200G ;
+               export OMP_STACKSIZE=5G ;
                ulimit -s unlimited ;
-               xtb ../../inputed_PDB/{path.basename(raphan.PDB_file)} --opt --alpb water --verbose --gfnff --input xtb_settings.inp --verbose > xtb_output.txt 2> xtb_error_output.txt""")
-    xtb_original_time = time() - t
+               xtb ../../input_PDB/{path.basename(raphan.PDB_file)} --opt --alpb water --verbose --gfnff --input xtb_settings.inp --verbose > xtb_output.txt 2> xtb_error_output.txt""")
+    GFNFFca_time = time() - t
 
-    # optimise structure optimised with raphan
-    system(f"mkdir {raphan.data_dir}/full_xtb_optimisation/raphan ")
-    with open(f"{raphan.data_dir}/full_xtb_optimisation/raphan/xtb_settings.inp", "w") as xtb_settings_file:
+    # optimise structure already optimised with raphan
+    system(f"mkdir {raphan.data_dir}/constrained_alpha_carbons_optimisations/raphan ")
+    with open(f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/raphan/xtb_settings.inp", "w") as xtb_settings_file:
         xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {','.join(alpha_carbons_indices)}\n$end")
-    t = time()
-    system(f"""cd {raphan.data_dir}/full_xtb_optimisation/raphan ;
+    system(f"""cd {raphan.data_dir}/constrained_alpha_carbons_optimisations/raphan ;
                export OMP_NUM_THREADS=1,1 ;
                export MKL_NUM_THREADS=1 ;
                export OMP_MAX_ACTIVE_LEVELS=1 ;
-               export OMP_STACKSIZE=200G ;
+               export OMP_STACKSIZE=5G ;
                ulimit -s unlimited ;
                xtb ../../optimised_PDB/{path.basename(raphan.PDB_file[:-4])}_optimised.pdb --opt --alpb water --verbose --gfnff --input xtb_settings.inp --verbose > xtb_output.txt 2> xtb_error_output.txt""")
-    xtb_raphan_time = time() - t
 
-    # compare original structure with original structure optimised by xtb
-    s1 = PDBParser(QUIET=True).get_structure(id="structure", file=raphan.PDB_file)
-    s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/full_xtb_optimisation/original/xtbopt.pdb")
-    sup = Superimposer()
-    sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
-    sup.apply(s2.get_atoms())
-    d = []
-    for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
-        d.append(a1 - a2)
-    original_xtb_original_difference = sum(d)/len(d)
+    # compare original structure with structure optimised by GFNFFca
+    try:
+        s1 = PDBParser(QUIET=True).get_structure(id="structure", file=raphan.PDB_file)
+        s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/original/xtbopt.pdb")
+        sup = Superimposer()
+        sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
+        sup.apply(s2.get_atoms())
+        differences = []
+        for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
+            differences.append(a1 - a2)
+        original_GFNFFca_difference = round(float(sum(differences)/len(differences)), 4)
+    except FileNotFoundError:
+        original_GFNFFca_difference = None
 
-    # compare structure optimised by raphan and structure optimised by raphan and subsequently by xtb
-    s1 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/optimised_PDB/{path.basename(raphan.PDB_file[:-4])}_optimised.pdb")
-    s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/full_xtb_optimisation/raphan/xtbopt.pdb")
-    sup = Superimposer()
-    sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
-    sup.apply(s2.get_atoms())
-    d = []
-    for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
-        d.append(a1 - a2)
-    raphan_xtb_raphan_difference = sum(d) / len(d)
+    # compare structure optimised by PROPTIMUS RAPHANgfnff and structure optimised by PROPTIMUS RAPHANgfnff + GFNFFca
+    try:
+        s1 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/optimised_PDB/{path.basename(raphan.PDB_file[:-4])}_optimised.pdb")
+        s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/raphan/xtbopt.pdb")
+        sup = Superimposer()
+        sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
+        sup.apply(s2.get_atoms())
+        differences = []
+        for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
+            differences.append(a1 - a2)
+        PROPTIMUS_RAPHANgfnff__PROPTIMUS_RAPHANgfnff_GFNFFca_difference = round(float(sum(differences) / len(differences)), 4)
+    except:
+        PROPTIMUS_RAPHANgfnff__PROPTIMUS_RAPHANgfnff_GFNFFca_difference = None
 
-    # compare original structure optimised by xtb and structure optimised by raphan and subsequently by xtb
-    s1 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/full_xtb_optimisation/original/xtbopt.pdb")
-    s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/full_xtb_optimisation/raphan/xtbopt.pdb")
-    sup = Superimposer()
-    sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
-    sup.apply(s2.get_atoms())
-    d = []
-    for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
-        d.append(a1 - a2)
-    xtb_original_xtb_raphan_difference = sum(d) / len(d)
+    # compare structure optimised by GFNFFca and structure optimised by PROPTIMUS RAPHANgfnff + GFNFFca
+    try:
+        s1 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/original/xtbopt.pdb")
+        s2 = PDBParser(QUIET=True).get_structure(id="structure", file=f"{raphan.data_dir}/constrained_alpha_carbons_optimisations/raphan/xtbopt.pdb")
+        sup = Superimposer()
+        sup.set_atoms([a for a in s1.get_atoms() if a.name == "CA"], [a for a in s2.get_atoms() if a.name == "CA"])
+        sup.apply(s2.get_atoms())
+        differences = []
+        for a1, a2 in zip(s1.get_atoms(), s2.get_atoms()):
+            differences.append(a1 - a2)
+        GFNFFca__PROPTIMUS_RAPHANgfnff_GFNFFca_difference = round(float(sum(differences) / len(differences)), 4)
+    except:
+        GFNFFca__PROPTIMUS_RAPHANgfnff_GFNFFca_difference = None
 
     # write results
-    results = {"raphan time": raphan.calculation_time,
-               "raphan iterations": raphan.iterations,
-               "xtb(original) time": xtb_original_time,
-               "xtb(raphan) time": xtb_raphan_time,
-               "original/xtb(original) MAD": float(original_xtb_original_difference),
-               "raphan/xtb(raphan) MAD": float(raphan_xtb_raphan_difference),
-               "xtb(raphan)/xtb(original)": float(xtb_original_xtb_raphan_difference)}
-    with open(f"{raphan.data_dir}/data.json", 'w') as data_json:
+    results = {"PROPTIMUS RAPHANgfnff time": round(raphan.calculation_time, 4),
+               "PROPTIMUS RAPHANgfnff iterations": raphan.iterations,
+               "GFN-FFca time": round(GFNFFca_time, 4),
+               "original / GFN-FFca MAD": original_GFNFFca_difference,
+               "PROPTIMUS RAPHANgfnff / PROPTIMUS RAPHANgfnff + GFN-FFca MAD": PROPTIMUS_RAPHANgfnff__PROPTIMUS_RAPHANgfnff_GFNFFca_difference,
+               "GFN-FFca / PROPTIMUS RAPHANgfnff + GFN-FFca": GFNFFca__PROPTIMUS_RAPHANgfnff_GFNFFca_difference}
+    with open(f"{raphan.data_dir}/comparison.json", 'w') as data_json:
         json.dump(results, data_json, indent=4)
-    print(" ok")
+    print("ok")
 
 
-if __name__ == '__main__':
+def main():
     args = load_arguments()
     t = time()
     raphan = Raphan(args.data_dir, args.PDB_file, args.cpu, args.delete_auxiliary_files)
     raphan.optimise()
     raphan.calculation_time = time() - t
+    with open(f"{args.data_dir}/time.txt", "w") as time_file:
+        time_file.write(str(raphan.calculation_time))
+    if args.constrained_alpha_carbons_optimisations:
+        run_constrained_alpha_optimisations(raphan)
+    print("")
 
-    if args.run_full_xtb_optimisation:
-        run_full_xtb_optimisation(raphan)
-    print("\n")
+
+if __name__ == '__main__':
+    main()
+
