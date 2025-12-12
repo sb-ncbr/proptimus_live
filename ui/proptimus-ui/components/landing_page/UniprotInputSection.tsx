@@ -138,6 +138,18 @@ const UniprotInputSection: React.FC = () => {
         }
     };
 
+    const handlePhChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPh(e.target.value);
+    };
+
+    const handlePhBlur = () => {
+        // Convert whole numbers to have at least one decimal place
+        const numValue = parseFloat(ph);
+        if (!isNaN(numValue) && Number.isInteger(numValue)) {
+            setPh(numValue.toFixed(1));
+        }
+    };
+
     return (
         <section className="flex flex-col items-center gap-6 pt-8 pb-0">
             <form className="w-full max-w-2xl" onSubmit={handleSubmit}>
@@ -220,7 +232,8 @@ const UniprotInputSection: React.FC = () => {
                             type="number"
                             step={0.1}
                             value={ph}
-                            onChange={e => setPh(e.target.value)}
+                            onChange={handlePhChange}
+                            onBlur={handlePhBlur}
                             placeholder="pH value (e.g. 7.0)"
                             className="text-xl py-6 pl-6"
                         />
