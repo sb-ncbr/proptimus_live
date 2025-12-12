@@ -36,7 +36,7 @@ export default function Showcase(): React.JSX.Element {
     <div className="w-full max-w-7xl mx-auto px-4 py-16">
       <div className="text-center mb-12">
         <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
-          Examples
+          How PROPTIMUS LIVE improve structures?
         </h2>
         <p className="text-lg text-gray-600 max-w-4xl mx-auto">
           Examples of structure improvements are from the structure with Uniprot AC A4QBG9. The original structure from AlphaFold DB is shown in grey, and the structure optimised by PROPTIMUS LIVE is in colour.

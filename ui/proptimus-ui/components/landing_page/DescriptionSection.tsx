@@ -12,7 +12,7 @@ export default function DescriptionSection(): React.JSX.Element {
           {" "}
           <span className="text-secondary">PR</span>
           <span className="dark-silver-text">
-            OPTIMus
+            OPTIMUS
           </span>
           {" "}
           <span className="dark-silver-text">
@@ -33,21 +33,27 @@ export default function DescriptionSection(): React.JSX.Element {
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Wrench className="h-6 w-6 text-primary" />
                 </div>
-                <p className="leading-relaxed">Repairs non-physically placed atoms with the PRIME tool, which may be present in ML-predicted protein structures.</p>
+                <p className="leading-relaxed">Repairs non-physically placed atoms with the <a
+                    href="https://github.com/lukasbohus/proptimus_prime" target="_blank"
+                    rel="noreferrer">PRIME</a> tool, which may be present in ML-predicted protein structures.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Atom className="h-6 w-6 text-primary" />
                 </div>
                 <p className="leading-relaxed">
-                  Adds hydrogens for user-specified pH using the pdb2pqr tool if the input structure does not contain them.
+                  Adds hydrogens for user-specified pH using the <a
+                    href="https://onlinelibrary.wiley.com/doi/10.1002/pro.3280" target="_blank"
+                    rel="noreferrer">pdb2pqr</a> tool if the input structure does not contain them.
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Cpu className="h-6 w-6 text-primary" />
                 </div>
-                <p className="leading-relaxed">Optimises protein structure using the RAPHAN method.</p>
+                <p className="leading-relaxed">Optimises protein structure using the <a
+                    href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
+                    rel="noreferrer">RAPHAN</a> method.</p>
               </div>
             </div>
           </Card>
@@ -59,14 +65,18 @@ export default function DescriptionSection(): React.JSX.Element {
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Crosshair className="h-6 w-6 text-primary mt-0.5" />
                 </div>
-                <p className="leading-relaxed">Accurate results because of modern physics-based GFN-Force-Field.
+                <p className="leading-relaxed">Accurate results because of modern physics-based <a
+                    href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
+                    rel="noreferrer">GFN-Force-Field</a>.
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <ChevronsUp className="h-7 w-7 text-primary" />
                 </div>
-                <p className="leading-relaxed">Fast calculations within minutes due to the divide-and-conquer RAPHAN method.</p>
+                <p className="leading-relaxed">Fast calculations within minutes due to the divide-and-conquer <a
+                    href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
+                    rel="noreferrer">RAPHAN</a> method.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
