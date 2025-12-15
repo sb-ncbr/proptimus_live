@@ -20,7 +20,7 @@ export default function DescriptionSection(): React.JSX.Element {
           </span>
         </h2>
         <p className="text-lg text-gray-700 text-center leading-relaxed mb-8">
-          PROPTIMUS LIVE is a freely available application for the local optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
+          PROPTIMUS LIVE is a freely available application for the α optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
           to reproduce protein structures <br /> optimised with constrained α-carbons.
 
         </p>
@@ -34,8 +34,8 @@ export default function DescriptionSection(): React.JSX.Element {
                   <Wrench className="h-6 w-6 text-primary" />
                 </div>
                 <p className="leading-relaxed">Repairs non-physically placed atoms with the <a
-                    href="https://github.com/lukasbohus/proptimus_prime" target="_blank"
-                    rel="noreferrer">PRIME</a> tool, which may be present in ML-predicted protein structures.</p>
+                  href="https://github.com/lukasbohus/proptimus_prime" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">PRIME</a> tool, which may be present in ML-predicted protein structures.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
@@ -44,7 +44,7 @@ export default function DescriptionSection(): React.JSX.Element {
                 <p className="leading-relaxed">
                   Adds hydrogens for user-specified pH using the <a
                     href="https://onlinelibrary.wiley.com/doi/10.1002/pro.3280" target="_blank"
-                    rel="noreferrer">pdb2pqr</a> tool if the input structure does not contain them.
+                    rel="noreferrer" className="font-semibold underline">pdb2pqr</a> tool if the input structure does not contain them.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -52,8 +52,8 @@ export default function DescriptionSection(): React.JSX.Element {
                   <Cpu className="h-6 w-6 text-primary" />
                 </div>
                 <p className="leading-relaxed">Optimises protein structure using the <a
-                    href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
-                    rel="noreferrer">RAPHAN</a> method.</p>
+                  href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">RAPHAN</a> method.</p>
               </div>
             </div>
           </Card>
@@ -66,8 +66,8 @@ export default function DescriptionSection(): React.JSX.Element {
                   <Crosshair className="h-6 w-6 text-primary mt-0.5" />
                 </div>
                 <p className="leading-relaxed">Accurate results because of modern physics-based <a
-                    href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
-                    rel="noreferrer">GFN-Force-Field</a>.
+                  href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">GFN-Force-Field</a>.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -75,8 +75,8 @@ export default function DescriptionSection(): React.JSX.Element {
                   <ChevronsUp className="h-7 w-7 text-primary" />
                 </div>
                 <p className="leading-relaxed">Fast calculations within minutes due to the divide-and-conquer <a
-                    href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
-                    rel="noreferrer">RAPHAN</a> method.</p>
+                  href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">RAPHAN</a> method.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">

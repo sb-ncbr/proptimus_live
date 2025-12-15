@@ -33,12 +33,12 @@ export function ProteinComparison({
         setIsClient(true);
         const createFileFromData = (data: string, filename: string): File => {
             const blob = new Blob([data], { type: 'chemical/x-pdb' }); // Correct MIME type for PDB
-            return new File([blob], filename, { type: 'chemical/x-cif' });
+            return new File([blob], filename, { type: 'chemical/x-pdb' });
         };
 
         // Use the dummy data for testing instead of the props
         setOriginalFile(createFileFromData(originalPdbData, 'original.pdb'));
-        setOptimizedFile(createFileFromData(optimizedPdbData, 'optimized.cif'));
+        setOptimizedFile(createFileFromData(optimizedPdbData, 'optimized.pdb'));
     }, []); // Note: Removed dependencies to only run once with dummy data
 
     const originalProtein = useMemo<Protein | null>(() => {

@@ -2,10 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/utils';
 
 export interface OptimizationProgress {
-  status: 'running' | 'finished' | 'error';
+  status: 'running' | 'finished' | 'queued' | 'unsubmitted' | 'error';
   progress: number; // 0-100
   message?: string;
   error?: string;
+  remaining_time?: string;
+  url?: string;
 }
 
 export function useOptimizationProgress(jobId: string) {
@@ -20,11 +22,12 @@ export function useOptimizationProgress(jobId: string) {
       
       // Transform the response to our expected format
       return {
-        status: data.status === 'finished' ? 'finished' : 
-                data.status === 'queued' || data.status === 'unsubmitted' ? 'running' : 'running',
+        status: data.status || 'running',
         progress: data.percent_value !== undefined ? data.percent_value : 0,
-        message: data.percent_text || data.message,
-        error: data.error
+        message: data.percent_text || data.message || '',
+        error: data.error,
+        remaining_time: data.remaining_time,
+        url: data.url
       };
     },
     enabled: !!jobId,

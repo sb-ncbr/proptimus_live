@@ -15,13 +15,15 @@ import {
 import { ErrorDisplay } from "@/components/visualizations/ErrorDisplay";
 import Header from "@/components/layout/Header";
 import ProteinResultsCard from "@/components/optimization/ProteinResultsCard";
+import { InteractionsCard } from "@/components/optimization/InteractionsCard";
 import { Button } from "@/components/common/Button";
 import { HardDriveDownload } from "lucide-react";
+import { useInteractionsData } from "@/hooks/useInteractionsData";
 
 function ResultsContent() {
   const searchParams = useSearchParams();
   const jobId = searchParams.get("query");
-  const [showLoader, setShowLoader] = React.useState(false);
+  const [showResults, setShowResults] = React.useState(false);
 
   // Parse job ID to extract UniProt ID and pH value
   const [uniprotId, phValue] = jobId ? jobId.split('_') : ['', ''];
@@ -58,14 +60,20 @@ function ResultsContent() {
     refetch: downloadFiles,
   } = useDownloadFiles(jobId || "", { enabled: false });
 
-  // Delay showing loader by 500ms to prevent flash for quick loads
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoader(true);
-    }, 500);
+  // Fetch interactions data
+  const {
+    data: interactionsData,
+    isLoading: interactionsLoading,
+  } = useInteractionsData(jobId || "");
 
-    return () => clearTimeout(timer);
-  }, []);
+  // Only show results when both PDB structures are loaded
+  React.useEffect(() => {
+    if (originalPdbData && optimizedPdbData && progressData?.status === "finished") {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => setShowResults(true), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [originalPdbData, optimizedPdbData, progressData?.status]);
 
   // Handle download
   const handleDownload = async () => {
@@ -139,24 +147,32 @@ function ResultsContent() {
     );
   }
 
-  // Show loading animation while optimization is running or loading
-  // Don't show loading screen if we're just refetching and already have finished data
-  if ((progressLoading && !progressData) || (progressData && progressData.status === "running")) {
-    if (!showLoader) {
-      return null; // Don't show anything for the first 500ms
-    }
-
+  // Show loading animation ONLY while optimization is actively running or queued
+  if (progressData && (progressData.status === "running" || progressData.status === "queued")) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 animate-in fade-in duration-300">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <OptimizationLoader
-          progress={progressData?.progress ?? 0}
-          status={progressData?.status || "running"}
-          message={progressData?.message}
-
+          status={progressData.status}
+          message={progressData.message}
+          remaining_time={progressData.remaining_time}
         />
       </div>
     );
-  }  // Handle PDB data loading errors
+  }
+
+  // Show minimal loading while waiting for initial progress data or if loading state
+  if (progressLoading || originalLoading || optimizedLoading || !originalPdbData || !optimizedPdbData || !showResults) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <OptimizationLoader
+          status="finished"
+          message="Loading protein structures..."
+        />
+      </div>
+    );
+  }
+
+  // Handle PDB data loading errors
   if (originalError || optimizedError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -167,27 +183,19 @@ function ResultsContent() {
     );
   }
 
-  // Show loading while fetching PDB data
-  if (
-    originalLoading ||
-    optimizedLoading ||
-    !originalPdbData ||
-    !optimizedPdbData
-  ) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <OptimizationLoader
-          progress={100}
-          status="finished"
-          message="Loading protein structures..."
-        />
-      </div>
-    );
-  }
-
   // Show results when everything is loaded
   return (
-    <main className="min-h-screen bg-gray-50 animate-in fade-in duration-500">
+    <main className="min-h-screen bg-gray-50 opacity-0 animate-fade-in" style={{ animation: 'fadeIn 0.6s ease-in forwards' }}>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
       <Header />
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 mt-8">
@@ -232,7 +240,7 @@ function ResultsContent() {
                 </tbody>
               </table>
             </div>
-            <ProteinResultsCard />
+            <InteractionsCard data={interactionsData} isLoading={interactionsLoading} />
           </div>
           <div className="flex justify-between  items-center">
             <div>

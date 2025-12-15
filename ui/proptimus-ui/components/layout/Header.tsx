@@ -17,7 +17,7 @@ export default function Header(): React.JSX.Element {
             <span className="text-2xl font-bold text-zinc-900 group-hover:brightness-110 transition-all duration-300">
               PR
               <span className="text-secondary group-hover:text-primary-600 dark-silver-text  ">
-                OPTIMus
+                OPTIMUS
               </span>
             </span>
           </Link>

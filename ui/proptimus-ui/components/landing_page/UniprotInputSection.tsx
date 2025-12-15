@@ -10,6 +10,7 @@ import useInputHinting from "../../hooks/useInputQueryHinting";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/utils";
+import { validateFile } from "../../lib/fileValidation";
 
 const UniprotInputSection: React.FC = () => {
     const [code, setCode] = useState("");
@@ -17,8 +18,10 @@ const UniprotInputSection: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
+    const [isShaking, setIsShaking] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const submitJob = useSubmitJob();
     const { hints, isLoading } = useInputHinting(code);
@@ -93,18 +96,51 @@ const UniprotInputSection: React.FC = () => {
         submitJob.mutate({ file, code, ph });
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const triggerShake = () => {
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 400);
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+            const selectedFile = e.target.files[0];
+
+            // Validate the file
+            const validation = await validateFile(selectedFile);
+
+            if (!validation.isValid) {
+                toast.error(validation.error || "Invalid file");
+                triggerShake();
+                // Clear the file input
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+                return;
+            }
+
+            setFile(selectedFile);
             setCode(""); // Clear code input if file is selected
+            toast.success("File validated successfully!");
         }
     };
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            setFile(e.dataTransfer.files[0]);
+            const droppedFile = e.dataTransfer.files[0];
+
+            // Validate the file
+            const validation = await validateFile(droppedFile);
+
+            if (!validation.isValid) {
+                toast.error(validation.error || "Invalid file");
+                triggerShake();
+                return;
+            }
+
+            setFile(droppedFile);
             setCode("");
+            toast.success("File validated successfully!");
         }
     };
 
@@ -139,23 +175,50 @@ const UniprotInputSection: React.FC = () => {
     };
 
     const handlePhChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPh(e.target.value);
+        const value = e.target.value;
+        const numValue = parseFloat(value);
+
+        // Allow empty string or valid numbers within range
+        if (value === "" || (!isNaN(numValue) && numValue >= 0 && numValue <= 14)) {
+            setPh(value);
+        }
     };
 
     const handlePhBlur = () => {
-        // Convert whole numbers to have at least one decimal place
+        // Convert to number and ensure it has at least one decimal place
         const numValue = parseFloat(ph);
-        if (!isNaN(numValue) && Number.isInteger(numValue)) {
-            setPh(numValue.toFixed(1));
+        if (!isNaN(numValue)) {
+            if (numValue < 0) {
+                setPh("0.0");
+                toast.error("pH must be between 0.0 and 14.0");
+            } else if (numValue > 14) {
+                setPh("14.0");
+                toast.error("pH must be between 0.0 and 14.0");
+            } else {
+                // Always format to at least one decimal place
+                setPh(numValue.toFixed(1));
+            }
+        } else if (ph === "") {
+            setPh("7.0");
         }
+    };
+
+    const handleExampleClick = (exampleCode: string, examplePh: string) => {
+        setCode(exampleCode);
+        setPh(examplePh);
+        setFile(null);
+        toast.info(`Example loaded: ${exampleCode} at pH ${examplePh}`);
     };
 
     return (
         <section className="flex flex-col items-center gap-6 pt-8 pb-0">
+
+
             <form className="w-full max-w-2xl" onSubmit={handleSubmit}>
                 <div className="flex w-full gap-4">
                     <div
-                        className="relative w-3/4"
+                        ref={containerRef}
+                        className={`relative w-3/4 ${isShaking ? 'shake-animation' : ''}`}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                     >
@@ -231,6 +294,8 @@ const UniprotInputSection: React.FC = () => {
                         <Input
                             type="number"
                             step={0.1}
+                            min={0}
+                            max={14}
                             value={ph}
                             onChange={handlePhChange}
                             onBlur={handlePhBlur}
@@ -238,6 +303,23 @@ const UniprotInputSection: React.FC = () => {
                             className="text-xl py-6 pl-6"
                         />
                     </div>
+                </div>
+                {/* Example Badges */}
+                <div className="flex items-center justify-center gap-3 pt-4">
+                    <button
+                        type="button"
+                        onClick={() => handleExampleClick("P0DL70", "7.0")}
+                        className="px-4 py-1.5 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 rounded-full text-sm font-semibold border border-blue-200 transition-all duration-200 hover:shadow-md"
+                    >
+                        P0DL70 • pH 7.0
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleExampleClick("P0DL07", "7.0")}
+                        className="px-4 py-1.5 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 transition-all duration-200 hover:shadow-md"
+                    >
+                        P0DL07 • pH 7.0
+                    </button>
                 </div>
                 <div className="mt-8 flex justify-center">
                     <Button
@@ -250,6 +332,7 @@ const UniprotInputSection: React.FC = () => {
                     </Button>
                 </div>
             </form>
+
         </section>
     );
 };

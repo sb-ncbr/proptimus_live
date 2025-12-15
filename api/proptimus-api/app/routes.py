@@ -136,12 +136,15 @@ def main_site():
         with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
             log_file.write(f'{request.remote_addr} {code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
 
+        
         # download pdb
         response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
         data_dir = f'{root_dir}/calculated_structures/{ID}'
-        os.mkdir(data_dir)
-        with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-            pdb.write(response.text)
+        
+        if not os.path.exists(data_dir):
+            os.mkdir(data_dir)
+            with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
+                pdb.write(response.text)
 
         # create and submit job
         global optimisers
@@ -193,6 +196,7 @@ def running_progress():
     remaining_time = ""
     message = ""
     url = ""
+    status = ""
 
     # check status
     if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'):
@@ -234,6 +238,37 @@ def running_progress():
                     "url": url,
                     "remaining_time": remaining_time})
     
+
+@application.route('/api/interactions/<ID>', methods=['GET'])
+def get_interactions(ID: str):
+    """Get inter-residual interactions data for a specific job ID"""
+    try:
+        code, ph = ID.split('_')
+    except:
+        return jsonify({"error": "Invalid ID format"}), 400
+
+    try:
+        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interacitons.json", 'r') as inter_residual_interactions_file:
+            inter_residual_interactions = json.load(inter_residual_interactions_file)
+            
+        return jsonify({
+            "ID": ID,
+            "code": code,
+            "ph": ph,
+            "hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
+            "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
+            "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
+            "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
+            "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
+            "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]
+        })
+    except FileNotFoundError:
+        return jsonify({
+            "ID": ID,
+            "code": code,
+            "ph": ph
+        })
+
 
 @application.route('/download_files')
 def download_files():

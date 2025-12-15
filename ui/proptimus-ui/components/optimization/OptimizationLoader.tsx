@@ -1,33 +1,29 @@
 "use client"
 
 import React from 'react';
-import { Progress } from '@/components/ui/progress';
 import { ProteinOptimizationAnimation } from './ProteinOptimizationAnimation';
+import { Loader2 } from 'lucide-react';
 
 interface OptimizationLoaderProps {
-  progress: number;
-  status: 'running' | 'finished' | 'error';
+  status: 'running' | 'finished' | 'queued' | 'unsubmitted' | 'error';
   message?: string;
+  remaining_time?: string;
   className?: string;
 }
 
 export function OptimizationLoader({
-  progress,
   status,
   message,
+  remaining_time,
   className = ""
 }: OptimizationLoaderProps) {
   const getStatusMessage = () => {
     if (status === 'error') return 'Optimization failed';
     if (status === 'finished') return 'Optimization complete!';
+    if (status === 'queued') return 'Your job is in the queue...';
+    if (status === 'unsubmitted') return 'Preparing optimization...';
     if (message) return message;
-
-    if (progress < 20) return 'Initializing protein structure...';
-    if (progress < 40) return 'Analyzing molecular bonds...';
-    if (progress < 60) return 'Optimizing geometry...';
-    if (progress < 80) return 'Refining structure...';
-    if (progress < 95) return 'Finalizing optimization...';
-    return 'Completing optimization...';
+    return 'Optimizing your protein structure...';
   };
 
   const getProgressColor = () => {
@@ -53,35 +49,38 @@ export function OptimizationLoader({
         )}
       </div>
 
-      {/* Progress bar */}
+      {/* Status message with spinner */}
       <div className="w-full max-w-md space-y-4">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Protein Structure Optimization
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            {getStatusMessage()}
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-            <span>Progress</span>
-            <span>{Math.round(progress)}%</span>
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {(status === 'running' || status === 'queued' || status === 'unsubmitted') && (
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            )}
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {getStatusMessage()}
+            </p>
           </div>
-
-          <Progress
-            value={progress}
-            className="h-3"
-          />
         </div>
       </div>
 
       {/* Additional status information */}
-      {status === 'running' && (
-        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>This process may take several minutes, if we don`t have it it our database calculation can take some time.</p>
-          <p>We are optimizing it in the background you can leave and check the final result later.</p>
+      {(status === 'running' || status === 'queued') && (
+        <div className="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
+          {remaining_time && (
+            <p className="text-base font-medium text-gray-700 dark:text-gray-300">
+              ⏱️ Estimated time: {remaining_time}
+            </p>
+          )}
+          {status === 'queued' && (
+            <p className="text-yellow-600 dark:text-yellow-400 font-medium">
+              ⏳ Your optimization is queued and will start shortly
+            </p>
+          )}
+          <p>This process may take several minutes. If we don't have it in our database, calculation can take some time.</p>
+          <p>We are optimizing it in the background - you can leave and check the final result later.</p>
         </div>
       )}
     </div>
