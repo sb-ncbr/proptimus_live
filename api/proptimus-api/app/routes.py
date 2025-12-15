@@ -1,20 +1,27 @@
-import gemmi
 import os
-import requests
 import zipfile
 from datetime import datetime
-from flask import  jsonify, render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
-from flask_cors import CORS
+from glob import glob
 from multiprocessing import Process, Manager
 from random import random
-from glob import glob
-from raphan import Raphan
+from time import time
+import json
 
+import biotite
+import biotite.structure as struc
+import biotite.structure.io as strucio
+import gemmi
+import requests
+from Bio.PDB import PDBParser, NeighborSearch
+from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
+from flask_cors import CORS
+
+from raphan import Raphan
 
 application = Flask(__name__)
 
-# Configure CORS to allow requests from your Next.js frontend
-# In production, replace '*' with your specific frontend URL
+# configure CORS to allow requests from your Next.js frontend
+# in production, replace '*' with your specific frontend URL
 cors_config = {
     "origins": os.environ.get('CORS_ORIGINS', 'http://147.251.245.48,http://localhost:3000').split(','),
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -24,43 +31,56 @@ cors_config = {
 }
 CORS(application, resources={r"/*": cors_config})
 
+# set up application variables
 application.jinja_env.trim_blocks = True
 application.jinja_env.lstrip_blocks = True
 application.config['SECRET_KEY'] = str(random())
-root_dir = os.path.dirname(os.path.abspath(__file__))
 
+root_dir = os.path.dirname(os.path.abspath(__file__))
 queue = Manager().list()
 running = Manager().list()
 optimisers = []
 number_of_processes = 1
-number_of_cpu = 6
+number_of_cpu = 64
 
 
-def create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code):
-    structure = gemmi.read_pdb(optimised_PDB_file)
-    structure.setup_entities()
-    structure.assign_label_seq_id()
-    block = structure.make_mmcif_block()
-    block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.cif')
-    with open(original_CIF_file, 'w') as cif_file:
-        cif_file.write(response.text)
-    document = gemmi.cif.read_string(response.text)
-    sole_block = document.sole_block()
-    ma_qa_metric_prefix = '_ma_qa_metric'
-    ma_qa_metric_local_prefix = '_ma_qa_metric_local'
-    ma_qa_metric_global_prefix = '_ma_qa_metric_global'
-    categories = {
-        ma_qa_metric_prefix: sole_block.get_mmcif_category(ma_qa_metric_prefix),
-        ma_qa_metric_local_prefix: sole_block.get_mmcif_category(ma_qa_metric_local_prefix),
-        ma_qa_metric_global_prefix: sole_block.get_mmcif_category(ma_qa_metric_global_prefix)
-    }
-    asym_id = block.get_mmcif_category('_struct_asym').get('id')[0]
-    length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
-    categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
-    for name, data in categories.items():
-        block.set_mmcif_category(name, data)
-    block.write_file(optimised_CIF_file)
+def get_interresidual_interactions(PDB_file):
+    inter_residual_interactions = {}
+    biotite_structure = strucio.load_structure(PDB_file,
+                                                extra_fields=["charge"],
+                                                include_bonds=True)
+    biopython_structure = PDBParser(QUIET=True).get_structure("structure", PDB_file)
+    inter_residual_interactions["H-bonds"] = len(struc.hbond(biotite_structure))
+    inter_residual_interactions["pi-pi interactions"] = len(struc.find_stacking_interactions(biotite_structure))
+    kdtree = NeighborSearch(list(biopython_structure.get_atoms()))
+    for atom in biopython_structure.get_atoms():
+        atom.chg = 0
+        if atom.name == "N":
+            near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
+                          atom.get_parent() == near_atom.get_parent()]
+            if len(near_atoms) == 5:
+                atom.chg = 1
+        elif atom.name == "NZ" and atom.get_parent().resname == "LYS":
+            near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
+                          atom.get_parent() == near_atom.get_parent()]
+            if len(near_atoms) == 5:
+                atom.chg = 1
+        elif atom.name == "CZ" and atom.get_parent().resname == "ARG":
+            bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
+                                atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
+            if len(bonded_hydrogens) == 5:
+                atom.chg = 1
+        elif atom.name == "CE1" and atom.get_parent().resname == "HIS":
+            bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
+                                atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
+            if len(bonded_hydrogens) == 3:
+                atom.chg = 1
+    charges = []
+    for coord in biotite_structure.coord:
+        charges.append(kdtree.search(coord, radius=0.1, level="A")[0].chg)
+    biotite_structure.charge = charges
+    inter_residual_interactions["pi-cation interactions"] = len(struc.find_pi_cation_interactions(biotite_structure))
+    return inter_residual_interactions
 
 
 def optimise_structures():
@@ -72,39 +92,41 @@ def optimise_structures():
         pdb_file = f'{data_dir}/{code}.pdb'
         pdb_file_with_hydrogens = f'{data_dir}/{code}_added_H.pdb'
 
+        # estimate calculation time
+        structure = PDBParser(QUIET=True).get_structure(id="structure",
+                                                        file=pdb_file)
+        num_of_atoms = len(list(structure.get_atoms())) * 2
+        estimated_time = num_of_atoms / number_of_cpu + num_of_atoms / 1000 + 30
+        with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
+            timefile.write(str(time() + estimated_time))
+
         # protonate structure
-        os.system(f'/opt/miniconda3/bin/pdb2pqr30 --titration-state-method propka '
+        os.system(f'pdb2pqr30 --titration-state-method propka '
                   f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
         # optimise structure
-        Raphan(f"{data_dir}", pdb_file_with_hydrogens, number_of_cpu, True).optimise()
+        Raphan(data_dir=data_dir,
+               PDB_file=pdb_file_with_hydrogens,
+               cpu=number_of_cpu,
+               delete_auxiliary_files=True).optimise()
 
-        # create mmcif
-        optimised_PDB_file = f'{data_dir}/{code}_added_H_optimised.pdb'
-        optimised_CIF_file = f'{data_dir}/{code}_added_H_optimised.cif'
-        original_CIF_file = f'{data_dir}/{code}.cif'
-        create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code)
+        with open(f"{data_dir}/interrezidual_interacitons.json", 'w') as inter_residual_interactions_file:
+            json.dump({"original structure": get_interresidual_interactions(pdb_file_with_hydrogens),
+                       "optimised structure": get_interresidual_interactions(f"{data_dir}/{code}_added_H_optimised.pdb")},
+                      inter_residual_interactions_file,
+                      indent=4)
+
         running.remove(ID)
 
 
-def job_status(ID: str):
-    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'):
-        return "finished"
-    elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
-        if ID in queue:
-            return "queued"
-        else:
-            return "running"
-    return "unsubmitted"
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
-
     if request.method == 'POST':
         # load user input
+
         code = request.form['code'].strip().upper()  # UniProt code, not case-sensitive
-        code = code.replace("AF-","").replace("-F1", "")  # Also AlphaFold DB identifiers are supproted (e.g. AF-A8H2R3-F1)
         ph = request.form['ph']
         if "." not in ph:
             ph = ph + ".0"
@@ -114,61 +136,26 @@ def main_site():
         with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
             log_file.write(f'{request.remote_addr} {code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
 
-        status = job_status(ID)
+        # download pdb
+        response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
+        data_dir = f'{root_dir}/calculated_structures/{ID}'
+        os.mkdir(data_dir)
+        with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
+            pdb.write(response.text)
 
-        if status == "finished":
-            return redirect(url_for('results', ID=ID))
+        # create and submit job
+        global optimisers
+        optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
+        queue.append(ID)
+        if len(optimisers) < number_of_processes:
+            optimiser = Process(target=optimise_structures)
+            optimiser.start()
+            optimisers.append(optimiser)
+        return redirect(url_for('results', ID=ID))
 
-        elif status in ["queued", "running"]:
-            flash(Markup(f'Optimisation of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
-                         f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
-                         f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
-            # return render_template('index.html', running=len(running), queued=len(queue))
-            return jsonify({"running": len(running),
-                            "queued": len(queue),
-                            "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
-
-        elif status == "unsubmitted":
-
-            # download pdb
-            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
-            if response.status_code != 200:
-                flash(Markup(f'The structure with code <strong>{code}</strong> '
-                             f'is either not found in AlphaFold DB or the code is entered in the wrong format. '
-                             f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
-                             f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
-                             f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
-                # return render_template('index.html', running=len(running), queued=len(queue))
-                return jsonify({"running": len(running),
-                                "queued": len(queue),
-                                "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
-            data_dir = f'{root_dir}/calculated_structures/{ID}'
-            try:
-                os.mkdir(data_dir)
-                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-                    pdb.write(response.text)
-            except (OSError, PermissionError) as e:
-                print(f"ERROR: Failed to create directory or write file: {e}")
-                flash(Markup(f'Server error: Unable to create job directory. Please contact administrator.'), 'danger')
-                return jsonify({"error": "Permission denied",
-                                "running": len(running),
-                                "queued": len(queue)})
-
-            # create and submit job
-            global optimisers
-            optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
-            queue.append(ID)
-            if len(optimisers) < number_of_processes:
-                optimiser = Process(target=optimise_structures)
-                optimiser.start()
-                optimisers.append(optimiser)
-            return redirect(url_for('results', ID=ID))
-
-    # return render_template('index.html', running=len(running), queued=len(queue))
     return jsonify({"running": len(running),
                     "queued": len(queue),
-                    "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
-
+                    "calculated": len(glob(f'{root_dir}/calculated_structures/*_*/*_added_H_optimised.pdb'))})
 
 
 @application.route('/results')
@@ -178,78 +165,74 @@ def results():
     try:
         code, ph = ID.split('_')
     except:
-        flash(Markup('The ID was entered in the wrong format. '
-                     'The ID should be of the form <strong>&ltUniProt code&gt_&ltph&gt.'), 'danger')
         return redirect(url_for('main_site'))
 
-    status = job_status(ID)
-
-    if status == "unsubmitted":
-        flash(Markup(f'There are no results for structure with UniProt <strong>{code}</strong> and pH <strong>{ph}</strong>.'), 'danger')
-        return redirect(url_for('main_site'))
-
-    if status == "queued":
-        # return render_template('queued.html',
-        #                        code=code,
-        #                        ph=ph)
-        return jsonify({"code": code,
-                        "ph": ph})
-
-    elif status == "running":
-        # return render_template('running.html',
-        #                        ID=ID,
-        #                        code=code,
-        #                        ph=ph)
+    try:
+        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interacitons.json", 'r') as inter_residual_interactions_file:
+            inter_residual_interactions = json.load(inter_residual_interactions_file)
+    except FileNotFoundError:
         return jsonify({"ID": ID,
                         "code": code,
                         "ph": ph})
 
-    # return render_template('results.html',
-    #                        ID=ID,
-    #                        code=code,
-    #                        ph=ph)
     return jsonify({"ID": ID,
                     "code": code,
-                    "ph": ph})
+                    "ph": ph,
+                    "hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
+                    "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
+                    "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
+                    "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
+                    "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
+                    "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]})
 
 
 @application.route('/api/running_progress', methods=['GET'])
 def running_progress():
+
     ID = request.args.get('ID')
+    remaining_time = ""
+    message = ""
+    url = ""
 
-    try:
-        code, _ = ID.split('_')
-    except:
-        return Response('The ID was entered in the wrong format. '
-                     'The ID should be of the form <strong>&ltUniProt code&gt_&ltph&gt.',
-                     status=404,
-                     mimetype='text/plain')
-    
-    status = job_status(ID)
-    response = { 'status': status }
-    
-    if status == 'unsubmitted':
-        return jsonify(response)
-    if status == 'queued':
-        return jsonify(response)
+    # check status
+    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'):
+        status = "finished"
+        url = url_for('results', ID=ID)
+    elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
+        if ID in queue:
+            status = "queued"
+        elif ID in running:
+            status = "running"
+            with open(f"{root_dir}/calculated_structures/{ID}/estimated_time.txt", 'r') as timefile:
+                remaining_seconds = float(timefile.read()) - time()
+                if remaining_seconds < 0:
+                    remaining_time = "The calculation is taking longer than usual. If the calculation does not finish soon, please contact us."
+                if remaining_seconds < 60:
+                    remaining_time = "less then 1 minute"
+                else:
+                    remaining_time = f"{round(remaining_seconds / 60)} minutes"
 
-    if status == 'finished':
-        response.update({
-            'url': url_for('results', ID=ID)
-        })
-        return jsonify(response)
+    else:
+        try:
+            code, _ = ID.split('_')
+        except:
+            status = "not applicable"
+            message = "The ID was entered in the wrong format. The ID should be of the form <UniProt code>_<pH>."
+        else:
+            response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
+            if response.status_code != 200:
+                status = "not applicable"
+                message = (f'The structure with code {code} '
+                           f'is either not found in AlphaFold DB or the code is entered in the wrong format. '
+                           f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
+                           f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. ')
+            else:
+                status = "unsubmitted"
 
-    iterations = len(glob(f'{root_dir}/calculated_structures/{ID}/optimised_PDB/*.pdb'))
-    percent_value = round(iterations / 50)
-    percent_text = f"{iterations}/50"
-
-    response.update({
-        'percent_value': percent_value,
-        'percent_text': percent_text,
-        'remaining_time': 100
-    })
-    
-    return jsonify(response)
+    return jsonify({"status": status,
+                    "message": message,
+                    "url": url,
+                    "remaining_time": remaining_time})
     
 
 @application.route('/download_files')
@@ -259,15 +242,13 @@ def download_files():
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
         zip.write(f'{data_dir}/{code}_added_H_optimised.pdb',f'{code}_optimised.pdb')
-        zip.write(f'{data_dir}/{code}_added_H_optimised.cif', f'{code}_optimised.cif')
         zip.write(f'{data_dir}/{code}.pdb', f'{code}_original.pdb')
-        zip.write(f'{data_dir}/{code}.cif', f'{code}_original.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
 @application.route('/optimised_structure/<ID>')
 def get_optimised_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.cif'
+    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
@@ -285,5 +266,4 @@ def get_residues_logs(ID: str):
 
 @application.errorhandler(404)
 def page_not_found(error):
-    # return render_template('404.html'), 404
     return jsonify({})
