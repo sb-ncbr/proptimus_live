@@ -4,15 +4,35 @@ import { apiFetch } from '../lib/utils';
 // 1. Submit a job (POST /)
 export function useSubmitJob() {
     return useMutation({
-        mutationFn: async ({ code, ph }: { file: File | null; code: string; ph: string }) => {
+        mutationFn: async ({ file, code, ph }: { file: File | null; code: string; ph: string }) => {
+            let body: FormData | URLSearchParams;
+            let headers: HeadersInit = {};
+
+            if (file) {
+                // Send as multipart/form-data with file
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('ph', ph);
+                body = formData;
+                // Don't set Content-Type - browser will set it with boundary
+            } else {
+                // Send as URL-encoded form data with code
+                body = new URLSearchParams({ code, ph });
+                headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            }
+
             const res = await apiFetch('/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ code, ph }).toString(),
+                headers,
+                body,
             });
-            if (!res.ok) throw new Error('Failed to submit job');
-            if (res.ok) { }
-            return await res.text(); // may be HTML redirect
+            
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || 'Failed to submit job');
+            }
+            
+            return await res.json(); // Returns { ID, status }
         },
     });
 }

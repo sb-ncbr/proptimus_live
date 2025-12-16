@@ -132,7 +132,7 @@ export default function Footer(): React.JSX.Element {
             <div>
               <span className="text-white font-semibold text-4xl">PR</span>
               <span className="dark-silver-text text-4xl font-bold">
-                OPTIMus <br />
+                OPTIMUS <br />
                 LIVE
               </span>
             </div>

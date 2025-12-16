@@ -26,8 +26,9 @@ export function useInteractionsData(jobId: string) {
     },
     enabled: !!jobId,
     staleTime: 5000, // Data is fresh for 5 seconds
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop refetching if we have the interaction data
+      const data = query.state.data;
       if (data && data["hbonds original"] !== undefined) {
         return false;
       }

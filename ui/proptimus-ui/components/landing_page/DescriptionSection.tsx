@@ -20,7 +20,7 @@ export default function DescriptionSection(): React.JSX.Element {
           </span>
         </h2>
         <p className="text-lg text-gray-700 text-center leading-relaxed mb-8">
-          PROPTIMUS LIVE is a freely available application for the α optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
+          PROPTIMUS LIVE is a freely available application for the α-carbons optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
           to reproduce protein structures <br /> optimised with constrained α-carbons.
 
         </p>

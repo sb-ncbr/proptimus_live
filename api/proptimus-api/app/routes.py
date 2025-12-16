@@ -120,33 +120,89 @@ def optimise_structures():
         running.remove(ID)
 
 
+def extract_uniprot_from_pdb(pdb_content: str) -> str:
+    """Extract UniProt code from PDB file content"""
+    lines = pdb_content.split('\n')
+    
+    # Try to find UniProt code in DBREF line
+    for line in lines:
+        if line.startswith('DBREF'):
+            parts = line.split()
+            for i, part in enumerate(parts):
+                if part == 'UNP' and i + 1 < len(parts):
+                    return parts[i + 1].strip().upper()
+    
+    # Try to find in HEADER/TITLE lines (AlphaFold format)
+    for line in lines:
+        if line.startswith('HEADER') or line.startswith('TITLE'):
+            # Look for pattern like AF-P0DL07 or (P0DL07)
+            import re
+            match = re.search(r'AF-([A-Z0-9]+)', line)
+            if match:
+                return match.group(1).upper()
+            match = re.search(r'\(([A-Z0-9]{6,10})\)', line)
+            if match:
+                return match.group(1).upper()
+    
+    return None
+
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
     if request.method == 'POST':
-        # load user input
-
-        code = request.form['code'].strip().upper()  # UniProt code, not case-sensitive
-        ph = request.form['ph']
+        ph = request.form.get('ph', '7.0')
         if "." not in ph:
             ph = ph + ".0"
-        ID = f'{code}_{ph}'
-
-        # log access
-        with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
-            log_file.write(f'{request.remote_addr} {code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
-
         
-        # download pdb
-        response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
-        data_dir = f'{root_dir}/calculated_structures/{ID}'
+        # Check if file was uploaded
+        if 'file' in request.files and request.files['file'].filename:
+            uploaded_file = request.files['file']
+            
+            # Read file content
+            pdb_content = uploaded_file.read().decode('utf-8')
+            
+            # Extract UniProt code from PDB content
+            code = extract_uniprot_from_pdb(pdb_content)
+            
+            if not code:
+                return jsonify({"error": "Could not extract UniProt code from PDB file. Please ensure the file is a valid PDB format."}), 400
+            
+            ID = f'{code}_{ph}'
+            data_dir = f'{root_dir}/calculated_structures/{ID}'
+            
+            # Log upload
+            with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
+                log_file.write(f'{request.remote_addr} UPLOAD:{code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
+            
+            # Create directory and save file if it doesn't exist
+            if not os.path.exists(data_dir):
+                os.makedirs(data_dir, exist_ok=True)
+                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
+                    pdb.write(pdb_content)
         
-        if not os.path.exists(data_dir):
-            os.mkdir(data_dir)
-            with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-                pdb.write(response.text)
+        else:
+            # Original code path - download from AlphaFold
+            code = request.form.get('code', '').strip().upper()
+            
+            if not code:
+                return jsonify({"error": "No UniProt code or file provided"}), 400
+            
+            ID = f'{code}_{ph}'
+            
+            # log access
+            with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
+                log_file.write(f'{request.remote_addr} {code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
+            
+            # download pdb
+            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
+            data_dir = f'{root_dir}/calculated_structures/{ID}'
+            
+            if not os.path.exists(data_dir):
+                os.makedirs(data_dir, exist_ok=True)
+                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
+                    pdb.write(response.text)
 
-        # create and submit job
+        # create and submit job (common for both paths)
         global optimisers
         optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
         queue.append(ID)
@@ -154,7 +210,8 @@ def main_site():
             optimiser = Process(target=optimise_structures)
             optimiser.start()
             optimisers.append(optimiser)
-        return redirect(url_for('results', ID=ID))
+        
+        return jsonify({"ID": ID, "status": "submitted"}), 200
 
     return jsonify({"running": len(running),
                     "queued": len(queue),

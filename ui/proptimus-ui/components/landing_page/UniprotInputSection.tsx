@@ -31,26 +31,13 @@ const UniprotInputSection: React.FC = () => {
     useEffect(() => {
         if (submitJob.isSuccess && submitJob.data) {
             toast.success("Job submitted! Redirecting to results...");
-            let query = "";
-            if (file) {
-                // If you use file, you may need to get the job ID from submitJob.data
-                // Adjust this logic based on your backend response
-                try {
-                    const responseText = submitJob.data as string;
-                    const data = typeof responseText === "string" ? JSON.parse(responseText) : responseText;
-                    query = (data as any)?.ID || "";
-                } catch {
-                    query = "";
-                }
-            } else {
-                // If using code and ph, build query from state
-                query = `${code}_${ph}`;
-            }
+            // Backend now returns { ID, status }
+            const jobId = submitJob.data.ID;
             setTimeout(() => {
-                router.push(`/results?query=${encodeURIComponent(query)}`);
+                router.push(`/results?query=${encodeURIComponent(jobId)}`);
             }, 1500); // 1.5s delay for toast
         }
-    }, [submitJob.isSuccess, submitJob.data, file, code, ph, router]);
+    }, [submitJob.isSuccess, submitJob.data, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
