@@ -118,7 +118,7 @@ def optimise_structures():
         Raphan(data_dir=data_dir,
                PDB_file=pdb_file_with_hydrogens,
                cpu=number_of_cpu,
-               delete_auxiliary_files=False).optimise()
+               delete_auxiliary_files=True).optimise()
 
         os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
 
