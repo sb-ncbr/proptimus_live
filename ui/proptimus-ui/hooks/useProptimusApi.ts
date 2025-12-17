@@ -28,8 +28,14 @@ export function useSubmitJob() {
             });
             
             if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.error || 'Failed to submit job');
+                let errorMessage = 'Failed to submit job';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
             
             return await res.json(); // Returns { ID, status }
@@ -43,7 +49,16 @@ export function useResults(ID: string) {
         queryKey: ['results', ID],
         queryFn: async () => {
             const res = await apiFetch(`/results?ID=${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to fetch results');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch results';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.text(); // may be HTML
         },
         enabled: !!ID,
@@ -55,7 +70,16 @@ export function useResultsStats() {
         queryKey: ['results'],
         queryFn: async () => {
             const res = await apiFetch(`/results`);
-            if (!res.ok) throw new Error('Failed to fetch results');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch results';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.text(); // may be HTML
         },
     });
@@ -67,7 +91,16 @@ export function useRunningProgress(ID: string) {
         queryKey: ['progress', ID],
         queryFn: async () => {
             const res = await apiFetch(`/api/running_progress?ID=${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to fetch progress');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch progress';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.json();
         },
         enabled: !!ID,
@@ -81,7 +114,16 @@ export function useDownloadFiles(ID: string, options?: { enabled?: boolean }) {
         queryKey: ['download', ID],
         queryFn: async () => {
             const res = await apiFetch(`/download_files?ID=${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to download files');
+            if (!res.ok) {
+                let errorMessage = 'Failed to download files';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.blob(); // ZIP file
         },
         enabled: !!ID && (options?.enabled !== false),
@@ -94,7 +136,16 @@ export function useOptimisedStructure(ID: string, options?: { enabled?: boolean 
         queryKey: ['optimised', ID],
         queryFn: async () => {
             const res = await apiFetch(`/optimised_structure/${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to fetch optimised structure');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch optimised structure';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.text(); // mmCIF
         },
         enabled: !!ID && (options?.enabled !== false),
@@ -107,7 +158,16 @@ export function useOriginalStructure(ID: string, options?: { enabled?: boolean }
         queryKey: ['original', ID],
         queryFn: async () => {
             const res = await apiFetch(`/original_structure/${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to fetch original structure');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch original structure';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.text(); // PDB
         },
         enabled: !!ID && (options?.enabled !== false),
@@ -120,7 +180,16 @@ export function useResiduesLogs(ID: string) {
         queryKey: ['residues', ID],
         queryFn: async () => {
             const res = await apiFetch(`/residues_logs/${encodeURIComponent(ID)}`);
-            if (!res.ok) throw new Error('Failed to fetch residues logs');
+            if (!res.ok) {
+                let errorMessage = 'Failed to fetch residues logs';
+                try {
+                    const error = await res.json();
+                    errorMessage = error.error || error.message || errorMessage;
+                } catch (e) {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
             return await res.text();
         },
         enabled: !!ID,

@@ -19,6 +19,7 @@ import { InteractionsCard } from "@/components/optimization/InteractionsCard";
 import { Button } from "@/components/common/Button";
 import { HardDriveDownload } from "lucide-react";
 import { useInteractionsData } from "@/hooks/useInteractionsData";
+import { toast } from "sonner";
 
 function ResultsContent() {
   const searchParams = useSearchParams();
@@ -26,7 +27,7 @@ function ResultsContent() {
   const [showResults, setShowResults] = React.useState(false);
 
   // Parse job ID to extract UniProt ID and pH value
-  const [uniprotId, phValue] = jobId ? jobId.split('_') : ['', ''];
+  const [optimisation_id, phValue] = jobId ? jobId.split('_') : ['', ''];
 
   // Fetch optimization progress
   const {
@@ -91,9 +92,12 @@ function ResultsContent() {
         document.body.removeChild(a);
       } else {
         console.error('Invalid download data received');
+        toast.error('Failed to download files: Invalid data received');
       }
     } catch (error) {
       console.error('Download failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Download failed: ${errorMessage}`);
     }
   };
 
@@ -116,10 +120,31 @@ function ResultsContent() {
   // Handle progress loading error
   if (progressError) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <ErrorDisplay
-          message={`Failed to load optimization progress: ${progressError.message}`}
-        />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-xl p-10 max-w-lg w-full text-center border border-gray-200">
+          <h1 className="text-4xl font-bold text-primary mb-10">
+            Something went wrong
+          </h1>
+          <p className="text-lg text-gray-600 text-primary mb-10">
+            {progressError instanceof Error ? progressError.message : 'Failed to load optimization progress'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-all duration-200 cursor-pointer"
+            >
+              Try Again
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/'}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -174,11 +199,35 @@ function ResultsContent() {
 
   // Handle PDB data loading errors
   if (originalError || optimizedError) {
+    const errorMessage = originalError instanceof Error ? originalError.message :
+      optimizedError instanceof Error ? optimizedError.message :
+        'Unknown error';
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <ErrorDisplay
-          message={`Failed to load protein structures: ${originalError?.message || optimizedError?.message || "Unknown error"}`}
-        />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-xl p-10 max-w-lg w-full text-center border border-gray-200">
+          <h1 className="text-4xl font-bold text-primary mb-10">
+            Something went wrong
+          </h1>
+          <p className="text-lg text-gray-600 text-primary mb-10">
+            Failed to load protein structures: {errorMessage}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-all duration-200 cursor-pointer"
+            >
+              Try Again
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/'}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -216,17 +265,10 @@ function ResultsContent() {
                 <tbody>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
-                      UniProt Code:
+                      Optimisation ID:
                     </td>
                     <td className="py-3">
-                      <a
-                        href={`https://alphafold.ebi.ac.uk/entry/${uniprotId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-silver hover:text-blue-800 underline"
-                      >
-                        {uniprotId}
-                      </a>
+                        {optimisation_id}
                     </td>
                   </tr>
                   <tr>

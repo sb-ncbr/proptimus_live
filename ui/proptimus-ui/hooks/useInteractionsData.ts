@@ -20,7 +20,14 @@ export function useInteractionsData(jobId: string) {
     queryFn: async () => {
       const response = await fetch(`${API_URL}/api/interactions/${jobId}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch interactions data");
+        let errorMessage = "Failed to fetch interactions data";
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
       return response.json();
     },
