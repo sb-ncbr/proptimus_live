@@ -198,3 +198,19 @@ dmypy.json
 .devcontainer
 .vscode
 
+calculated_structures/*
+calculated_structures/P0DL70_6.8/P0DL70_added_H_optimised.cif
+calculated_structures/P0DL70_6.8/P0DL70_added_H_optimised.pdb
+calculated_structures/P0DL70_6.8/P0DL70_added_H.pdb
+calculated_structures/P0DL70_6.8/P0DL70.cif
+calculated_structures/P0DL70_6.8/P0DL70.pqr
+calculated_structures/P0DL70_6.8/P0DL70.pdb
+calculated_structures/P0DL70_6.8/residues.logs
+calculated_structures/P0DL70_7.0/P0DL70.pdb
+calculated_structures/P0DL70_7.1/P0DL70_added_H_optimised.cif
+calculated_structures/P0DL70_7.1/P0DL70_added_H_optimised.pdb
+calculated_structures/P0DL70_7.1/P0DL70_added_H.pdb
+calculated_structures/P0DL70_7.1/P0DL70.cif
+calculated_structures/P0DL70_7.1/P0DL70.pdb
+calculated_structures/P0DL70_7.1/P0DL70.pqr
+calculated_structures/P0DL70_7.1/residues.logs

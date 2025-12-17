@@ -37,7 +37,15 @@ const UniprotInputSection: React.FC = () => {
                 router.push(`/results?query=${encodeURIComponent(jobId)}`);
             }, 1500); // 1.5s delay for toast
         }
-    }, [submitJob.isSuccess, submitJob.data, router]);
+        if (submitJob.isError) {
+            triggerShake();
+            const errorMessage = submitJob.error instanceof Error ? submitJob.error.message : 'Unknown error occurred';
+            toast.error(`Error: ${errorMessage}`);
+
+            // If it's a 400-level error (validation error), show for longer
+            // but don't redirect to error page - keep user on form
+        }
+    }, [submitJob.isSuccess, submitJob.data, submitJob.isError, submitJob.error, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,8 +58,32 @@ const UniprotInputSection: React.FC = () => {
 
             try {
                 const res = await apiFetch(`/api/running_progress?ID=${encodeURIComponent(jobId)}`);
+
+                // Handle 406 Not Acceptable - invalid UniProt code format
+                if (res.status === 406) {
+                    let errorMessage = "Invalid protein code or format";
+                    try {
+                        const errorData = await res.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch (e) {
+                        // If can't parse JSON, use default message
+                    }
+                    toast.error(errorMessage);
+                    triggerShake();
+                    setIsChecking(false);
+                    return;
+                }
+
                 if (res.ok) {
                     const data = await res.json();
+
+                    // If not applicable, show error and don't submit
+                    if (data.status === 'not applicable') {
+                        toast.error(data.message || "Invalid protein code or format");
+                        triggerShake();
+                        setIsChecking(false);
+                        return;
+                    }
 
                     // If already finished, redirect immediately
                     if (data.status === 'finished') {
