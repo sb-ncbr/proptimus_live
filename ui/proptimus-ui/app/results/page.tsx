@@ -26,7 +26,7 @@ function ResultsContent() {
   const [showResults, setShowResults] = React.useState(false);
 
   // Parse job ID to extract UniProt ID and pH value
-  const [uniprotId, phValue] = jobId ? jobId.split('_') : ['', ''];
+  const [optimisation_id, phValue] = jobId ? jobId.split('_') : ['', ''];
 
   // Fetch optimization progress
   const {
@@ -216,17 +216,10 @@ function ResultsContent() {
                 <tbody>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
-                      UniProt Code:
+                      Optimisation ID:
                     </td>
                     <td className="py-3">
-                      <a
-                        href={`https://alphafold.ebi.ac.uk/entry/${uniprotId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-silver hover:text-blue-800 underline"
-                      >
-                        {uniprotId}
-                      </a>
+                        {optimisation_id}
                     </td>
                   </tr>
                   <tr>

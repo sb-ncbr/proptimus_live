@@ -235,7 +235,7 @@ const UniprotInputSection: React.FC = () => {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".pdb,.cif,.txt"
+                            accept=".pdb"
                             style={{ display: "none" }}
                             onChange={handleFileChange}
                         />
@@ -295,17 +295,17 @@ const UniprotInputSection: React.FC = () => {
                 <div className="flex items-center justify-center gap-3 pt-4">
                     <button
                         type="button"
-                        onClick={() => handleExampleClick("P0DL70", "7.0")}
+                        onClick={() => handleExampleClick("L8BU87", "8.0")}
                         className="px-4 py-1.5 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 rounded-full text-sm font-semibold border border-blue-200 transition-all duration-200 hover:shadow-md"
                     >
-                        P0DL70 • pH 7.0
+                        UniProt ID L8BU87 • pH 8.0
                     </button>
                     <button
                         type="button"
                         onClick={() => handleExampleClick("P0DL07", "7.0")}
                         className="px-4 py-1.5 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 transition-all duration-200 hover:shadow-md"
                     >
-                        P0DL07 • pH 7.0
+                        UniProt ID P0DL07 • pH 7.0
                     </button>
                 </div>
                 <div className="mt-8 flex justify-center">

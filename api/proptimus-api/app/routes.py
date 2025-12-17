@@ -1,11 +1,13 @@
+import json
 import os
+import uuid
 import zipfile
 from datetime import datetime
 from glob import glob
 from multiprocessing import Process, Manager
+from pathlib import Path
 from random import random
 from time import time
-import json
 
 import biotite
 import biotite.structure as struc
@@ -16,6 +18,7 @@ from Bio.PDB import PDBParser, NeighborSearch
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
 
+from prime import PrimaryIntegrityMeasuresTaker
 from raphan import Raphan
 
 application = Flask(__name__)
@@ -89,8 +92,8 @@ def optimise_structures():
         running.append(ID)
         code, ph = ID.split('_')
         data_dir = f'{root_dir}/calculated_structures/{ID}'
-        pdb_file = f'{data_dir}/{code}.pdb'
-        pdb_file_with_hydrogens = f'{data_dir}/{code}_added_H.pdb'
+        pdb_file = f'{data_dir}/original.pdb'
+        pdb_file_with_hydrogens = f'{data_dir}/original_addedH.pdb'
 
         # estimate calculation time
         structure = PDBParser(QUIET=True).get_structure(id="structure",
@@ -99,6 +102,12 @@ def optimise_structures():
         estimated_time = num_of_atoms / number_of_cpu + num_of_atoms / 1000 + 30
         with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
             timefile.write(str(time() + estimated_time))
+
+        # correct wrongly placed atoms
+        PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                      json_logs_dir=Path(f"{data_dir}")).process_structure()
+        if Path(f"{data_dir}/correction_sicc_af").exists():
+            pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
 
         # protonate structure
         os.system(f'pdb2pqr30 --titration-state-method propka '
@@ -111,96 +120,54 @@ def optimise_structures():
                cpu=number_of_cpu,
                delete_auxiliary_files=True).optimise()
 
+        os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
+
         with open(f"{data_dir}/interrezidual_interacitons.json", 'w') as inter_residual_interactions_file:
             json.dump({"original structure": get_interresidual_interactions(pdb_file_with_hydrogens),
-                       "optimised structure": get_interresidual_interactions(f"{data_dir}/{code}_added_H_optimised.pdb")},
+                       "optimised structure": get_interresidual_interactions(f"{data_dir}/optimised.pdb")},
                       inter_residual_interactions_file,
                       indent=4)
 
         running.remove(ID)
 
 
-def extract_uniprot_from_pdb(pdb_content: str) -> str:
-    """Extract UniProt code from PDB file content"""
-    lines = pdb_content.split('\n')
-    
-    # Try to find UniProt code in DBREF line
-    for line in lines:
-        if line.startswith('DBREF'):
-            parts = line.split()
-            for i, part in enumerate(parts):
-                if part == 'UNP' and i + 1 < len(parts):
-                    return parts[i + 1].strip().upper()
-    
-    # Try to find in HEADER/TITLE lines (AlphaFold format)
-    for line in lines:
-        if line.startswith('HEADER') or line.startswith('TITLE'):
-            # Look for pattern like AF-P0DL07 or (P0DL07)
-            import re
-            match = re.search(r'AF-([A-Z0-9]+)', line)
-            if match:
-                return match.group(1).upper()
-            match = re.search(r'\(([A-Z0-9]{6,10})\)', line)
-            if match:
-                return match.group(1).upper()
-    
-    return None
-
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
     if request.method == 'POST':
-        ph = request.form.get('ph', '7.0')
-        if "." not in ph:
-            ph = ph + ".0"
-        
-        # Check if file was uploaded
+        ph = request.form.get('ph')
+
+        # if file was uploaded
         if 'file' in request.files and request.files['file'].filename:
-            uploaded_file = request.files['file']
-            
-            # Read file content
-            pdb_content = uploaded_file.read().decode('utf-8')
-            
-            # Extract UniProt code from PDB content
-            code = extract_uniprot_from_pdb(pdb_content)
-            
-            if not code:
-                return jsonify({"error": "Could not extract UniProt code from PDB file. Please ensure the file is a valid PDB format."}), 400
-            
-            ID = f'{code}_{ph}'
-            data_dir = f'{root_dir}/calculated_structures/{ID}'
-            
-            # Log upload
-            with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
-                log_file.write(f'{request.remote_addr} UPLOAD:{code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
-            
-            # Create directory and save file if it doesn't exist
-            if not os.path.exists(data_dir):
-                os.makedirs(data_dir, exist_ok=True)
-                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-                    pdb.write(pdb_content)
-        
+
+            # get calculation data
+            code = uuid.uuid4()
+            pdb_str = request.files['file'].read().decode('utf-8')
+
         else:
-            # Original code path - download from AlphaFold
+
+            # get calculation data
             code = request.form.get('code', '').strip().upper()
-            
-            if not code:
-                return jsonify({"error": "No UniProt code or file provided"}), 400
-            
-            ID = f'{code}_{ph}'
-            
-            # log access
-            with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
-                log_file.write(f'{request.remote_addr} {code} {ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
-            
-            # download pdb
-            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
-            data_dir = f'{root_dir}/calculated_structures/{ID}'
-            
-            if not os.path.exists(data_dir):
-                os.makedirs(data_dir, exist_ok=True)
-                with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
-                    pdb.write(response.text)
+            pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
+
+
+        # create data dir and save pdb file
+        ID = f'{code}_{ph}'
+        data_dir = f'{root_dir}/calculated_structures/{ID}'
+        os.makedirs(data_dir, exist_ok=True)
+        with open(f'{data_dir}/original.pdb', 'w') as pdb:
+            pdb.write(pdb_str)
+
+        # log access
+        with open(f'{root_dir}/calculated_structures/logs.txt', 'a') as log_file:
+            log_file.write(f'{request.remote_addr} {ID} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
+
+        # validate PDB file
+        try:
+            _ = PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
+        except:
+            return jsonify({"status": "not applicable",
+                            "message": "Uploaded file is not valid PDB file."}), 406
 
         # create and submit job (common for both paths)
         global optimisers
@@ -215,7 +182,7 @@ def main_site():
 
     return jsonify({"running": len(running),
                     "queued": len(queue),
-                    "calculated": len(glob(f'{root_dir}/calculated_structures/*_*/*_added_H_optimised.pdb'))})
+                    "calculated": len(glob(f'{root_dir}/calculated_structures/*_*/optimised.pdb'))})
 
 
 @application.route('/results')
@@ -227,23 +194,14 @@ def results():
     except:
         return redirect(url_for('main_site'))
 
-    try:
-        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interacitons.json", 'r') as inter_residual_interactions_file:
-            inter_residual_interactions = json.load(inter_residual_interactions_file)
-    except FileNotFoundError:
-        return jsonify({"ID": ID,
-                        "code": code,
-                        "ph": ph})
+    if not os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
+        return jsonify({"status": "not applicable",
+                        "message": f"No results for ID {ID}."}), 406
 
     return jsonify({"ID": ID,
                     "code": code,
-                    "ph": ph,
-                    "hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
-                    "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
-                    "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
-                    "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
-                    "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
-                    "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]})
+                    "ph": ph})
+
 
 
 @application.route('/api/running_progress', methods=['GET'])
@@ -256,7 +214,7 @@ def running_progress():
     status = ""
 
     # check status
-    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'):
+    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb'):
         status = "finished"
         url = url_for('results', ID=ID)
     elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
@@ -290,63 +248,54 @@ def running_progress():
             else:
                 status = "unsubmitted"
 
+    status_code = 200
+    if status == "not applicable":
+        status_code = 406
+
     return jsonify({"status": status,
                     "message": message,
                     "url": url,
-                    "remaining_time": remaining_time})
+                    "remaining_time": remaining_time}), status_code
     
 
 @application.route('/api/interactions/<ID>', methods=['GET'])
 def get_interactions(ID: str):
-    """Get inter-residual interactions data for a specific job ID"""
-    try:
-        code, ph = ID.split('_')
-    except:
-        return jsonify({"error": "Invalid ID format"}), 400
-
     try:
         with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interacitons.json", 'r') as inter_residual_interactions_file:
             inter_residual_interactions = json.load(inter_residual_interactions_file)
-            
-        return jsonify({
-            "ID": ID,
-            "code": code,
-            "ph": ph,
-            "hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
-            "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
-            "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
-            "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
-            "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
-            "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]
-        })
     except FileNotFoundError:
-        return jsonify({
-            "ID": ID,
-            "code": code,
-            "ph": ph
-        })
+        return jsonify({"status": "not applicable",
+                        "message": f"No results for ID {ID}."}), 406
 
+    return jsonify({"hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
+                    "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
+                    "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
+                    "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
+                    "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
+                    "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]})
 
 @application.route('/download_files')
 def download_files():
     ID = request.args.get('ID')
-    code, _ = ID.split("_")
+    code, ph = ID.split('_')
+    if len(code) == 36:
+        code = "structure"
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
-        zip.write(f'{data_dir}/{code}_added_H_optimised.pdb',f'{code}_optimised.pdb')
-        zip.write(f'{data_dir}/{code}.pdb', f'{code}_original.pdb')
+        zip.write(f'{data_dir}/optimised.pdb',f'{code}_optimised.pdb')
+        zip.write(f'{data_dir}/original.pdb', f'{code}_original.pdb')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
 @application.route('/optimised_structure/<ID>')
 def get_optimised_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H_optimised.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimised.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/original_structure/<ID>')
 def get_original_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/{ID.split("_")[0]}_added_H.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID}/original.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
