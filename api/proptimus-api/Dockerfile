@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM ubuntu:24.04
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
