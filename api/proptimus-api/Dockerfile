@@ -27,7 +27,7 @@ RUN git clone https://github.com/sb-ncbr/proptimus_raphan
 # Poznámka: prostředí v tomto yml se jmenuje 'proptimus-raphan'
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
 RUN conda env create -f proptimus_raphan/environment.yml && \
-    conda install -n proptimus-raphan anaconda::flask anaconda::flask-cors conda-forge::biotite conda-forge::scikit-learn tabulate conda-forge::pdb2pqr conda-forge::gemmi && \
+    conda install -n proptimus-raphan anaconda::flask anaconda::flask-cors conda-forge::biotite conda-forge::scikit-learn tabulate conda-forge::pdb2pqr conda-forge::gemmi --freeze-installed && \
     conda clean -afy
 
 # 4. Nastavení cest pro nové prostředí
