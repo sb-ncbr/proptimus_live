@@ -16,41 +16,37 @@ RUN mkdir -p /opt/miniconda3 && \
     bash /tmp/miniconda.sh -b -u -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh
 
-# Přidání kondy do PATH
+# Přidání kondy do PATH pro build proces
 ENV PATH="/opt/miniconda3/bin:${PATH}"
 
-# 3. Klonování repozitáře a vytvoření prostředí
-# Klonujeme přímo do složky proptimus_raphan
-RUN git clone https://github.com/sb-ncbr/proptimus_raphan
+# 3. Kopírování definice prostředí
+COPY environment.yml .
 
-# Vytvoření prostředí z environment.yml v repozitáři
-# Poznámka: prostředí v tomto yml se jmenuje 'proptimus-raphan'
+# 4. Vytvoření prostředí
+# Předpokládám, že v environment.yml máte definované jméno (např. 'myenv')
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
-RUN conda env create -f proptimus_raphan/environment.yml && \
-    conda install -n proptimus-raphan anaconda::flask anaconda::flask-cors conda-forge::biotite conda-forge::scikit-learn tabulate conda-forge::pdb2pqr conda-forge::gemmi && \
+RUN conda env create -f environment.yml && \
     conda clean -afy
 
-# 4. Nastavení cest pro nové prostředí
-# Tímto krokem zajistíme, že 'python' a 'flask' budou brány z proptimus-raphan
-ENV CONDA_DEFAULT_ENV=proptimus-raphan
-ENV PATH="/opt/miniconda3/envs/proptimus-raphan/bin:${PATH}"
+# 5. Nastavení automatické aktivace prostředí
+# Místo složitého 'conda activate' v Dockeru prostě nastavíme cesty natvrdo do PATH.
+# Změňte 'myenv' na název prostředí, který máte v environment.yml
+ENV CONDA_DEFAULT_ENV=myenv
+ENV PATH="/opt/miniconda3/envs/myenv/bin:${PATH}"
 
-# 5. Kopírování tvé lokální aplikace (pokud ji máš separátně)
-# Pokud je tvá aplikace součástí toho staženého repa, WORKDIR nastav tam.
-# Předpokládám, že tvůj kód kopíruješ k tomu staženému:
+# 6. Kopírování aplikace
 COPY app/ ./app/
 WORKDIR /app/app
 
 RUN mkdir -p calculated_structures && chmod 777 calculated_structures
 
-# 6. Prostředí a cesty k binárkám
+# 7. Prostředí a cesty k binárkám (nyní směřují do konkrétního environmentu)
 ENV FLASK_APP=routes.py
 ENV PYTHONUNBUFFERED=1
-ENV XTB_PATH=/opt/miniconda3/envs/proptimus-raphan/bin/xtb
-ENV OBABEL_PATH=/opt/miniconda3/envs/proptimus-raphan/bin/obabel
+ENV XTB_PATH=/opt/miniconda3/envs/myenv/bin/xtb
+ENV OBABEL_PATH=/opt/miniconda3/envs/myenv/bin/obabel
 
 EXPOSE 80
 
-
-# Spuštění aplikace
+# Spuštění přímo přes flask (díky PATH v kroku 5 se použije ten z environmentu)
 CMD ["flask", "run", "--host=0.0.0.0", "--port=80"]
