@@ -4,7 +4,7 @@ interface Showcase {
   id: number;
   name: string;
   imageSrc: string;
-  description: string;
+  description: React.ReactNode;
 }
 
 interface ShowcaseCardProps {
