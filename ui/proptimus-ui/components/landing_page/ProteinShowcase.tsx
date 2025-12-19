@@ -101,34 +101,34 @@ export default function ProteinShowcase(): React.JSX.Element {
   const featuredProteins = [
     {
       id: 1,
-      name: "How does it work?",
-      uniprotId: "Scheme of the RAPHAN method",
+      name: "How it work?",
+      uniprotId: "Scheme of the RAPHAN approach",
       description:
         "PROPTIMUS LIVE optimises protein structures using the RAPHAN method.",
       fullDescription:
-        "PROPTIMUS LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
+        "PROPTIMUS LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by physics-based GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
       imageSrc: schema,
-      documentationHref: "/manual",
+      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
     },
     {
       id: 2,
       name: "How accurate is it?",
-      uniprotId: "Atom position deviations for RAPHAN and constrained α-carbons optimisations.",
+      uniprotId: "Atom position deviations for RAPHAN and GFN-FF constrained α-carbons optimisations.",
       description: "The RAPHAN method produces highly accurate structures.",
       fullDescription:
-        "The RAPHAN method produces structures comparable to structures optimised with constrained α-carbons. The mean absolute deviation of atomic positions is approximately 0.03 Å, and the 99th percentile is 0.33 Å. As can be seen in the histogram, structures may differ exceptionally for highly flexible residues.",
+        "The RAPHAN method produces structures comparable to structures optimised by GFN-Force-Field with constrained α-carbons. The mean absolute deviation of atomic positions is approximately 0.03 Å, and the 99th percentile is 0.33 Å. As can be seen in the histogram, structures may differ exceptionally for highly flexible residues.",
       imageSrc: histogram,
-      documentationHref: "/manual",
+      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
     },
     {
       id: 3,
       name: "How fast is it?",
-      uniprotId: "Optimisation times RAPHAN and constrained α-carbons optimisations",
+      uniprotId: "Optimisation times for RAPHAN and GFN-FF constrained α-carbons optimisations",
       description: "RAPHAN optimises proteins in minutes.",
       fullDescription:
-        "A lot. While the duration of optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes.",
+        "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes with an average speed of 1000 atoms per minute.",
       imageSrc: times,
-      documentationHref: "/manual",
+      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
     },
   ];
 
@@ -136,7 +136,7 @@ export default function ProteinShowcase(): React.JSX.Element {
     <div className="w-full max-w-7xl mx-auto px-4 py-16">
       <div className="text-center mb-8">
         <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
-          About our optimisation method
+          About the RAPHAN approach
         </h2>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
           Explore our method for fast and accurate protein structure optimisation.

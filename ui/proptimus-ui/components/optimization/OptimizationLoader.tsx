@@ -79,8 +79,7 @@ export function OptimizationLoader({
               ⏳ Your optimization is queued and will start shortly
             </p>
           )}
-          <p>This process may take several minutes. If we don't have it in our database, calculation can take some time.</p>
-          <p>We are optimizing it in the background - you can leave and check the final result later.</p>
+          <p>If you want to leave the page, save the URL for later access to the optimization results.</p>
         </div>
       )}
     </div>

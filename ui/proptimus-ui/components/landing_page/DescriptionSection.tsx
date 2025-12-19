@@ -8,20 +8,10 @@ export default function DescriptionSection(): React.JSX.Element {
     <section className="bg-white">
       <div className="mx-auto max-w-7xl px-6 py-14">
         <h2 className="lg:text-4xl font-bold text-center text-gray-900 mb-8">
-          About
-          {" "}
-          <span className="text-secondary">PR</span>
-          <span className="dark-silver-text">
-            OPTIMUS
-          </span>
-          {" "}
-          <span className="dark-silver-text">
-            LIVE
-          </span>
+          About PROPTIMUS LIVE
         </h2>
         <p className="text-lg text-gray-700 text-center leading-relaxed mb-8">
-          PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the RAPHAN method, employing an almost QM-accurate GFN-Force-Field
-          to reproduce protein structures <br /> optimised with constrained α-carbons.
+          PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach.
 
         </p>
 
@@ -33,9 +23,9 @@ export default function DescriptionSection(): React.JSX.Element {
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Wrench className="h-6 w-6 text-primary" />
                 </div>
-                <p className="leading-relaxed">Repairs non-physically placed atoms with the <a
-                  href="https://github.com/lukasbohus/proptimus_prime" target="_blank"
-                  rel="noreferrer" className="font-semibold underline">PRIME</a> tool, which may be present in ML-predicted protein structures.</p>
+                <p className="leading-relaxed">Repairs non-physically predicted atoms with the <a
+                  href="https://onlinelibrary.wiley.com/doi/10.1002/pro.3280" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">pdb2pqr</a> tool, <br /> which may be present in ML-predicted protein structures.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
@@ -44,16 +34,15 @@ export default function DescriptionSection(): React.JSX.Element {
                 <p className="leading-relaxed">
                   Adds hydrogens for user-specified pH using the <a
                     href="https://onlinelibrary.wiley.com/doi/10.1002/pro.3280" target="_blank"
-                    rel="noreferrer" className="font-semibold underline">pdb2pqr</a> tool if the input structure does not contain them.
+                    rel="noreferrer" className="font-semibold underline">pdb2pqr</a> tool <br />if the input structure does not contain them.
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Cpu className="h-6 w-6 text-primary" />
                 </div>
-                <p className="leading-relaxed">Optimises protein structure using the <a
-                  href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
-                  rel="noreferrer" className="font-semibold underline">RAPHAN</a> method.</p>
+                <p className="leading-relaxed">Optimises protein structure with constrained α-carbons <br />using the <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">GFN-Force-Field</a>.</p>
               </div>
             </div>
           </Card>
@@ -65,8 +54,7 @@ export default function DescriptionSection(): React.JSX.Element {
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <Crosshair className="h-6 w-6 text-primary mt-0.5" />
                 </div>
-                <p className="leading-relaxed">Accurate results because of modern physics-based <a
-                  href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
+                <p className="leading-relaxed">High-quality results because of the use of an almost<br /> quantum-mechanics accurate <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
                   rel="noreferrer" className="font-semibold underline">GFN-Force-Field</a>.
                 </p>
               </div>
@@ -74,9 +62,9 @@ export default function DescriptionSection(): React.JSX.Element {
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
                   <ChevronsUp className="h-7 w-7 text-primary" />
                 </div>
-                <p className="leading-relaxed">Fast calculations within minutes due to the divide-and-conquer <a
+                <p className="leading-relaxed">Fast calculations within minutes due to the acceleration<br /> by divide-and-conquer <a
                   href="https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1" target="_blank"
-                  rel="noreferrer" className="font-semibold underline">RAPHAN</a> method.</p>
+                  rel="noreferrer" className="font-semibold underline">RAPHAN</a> approach.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 flex items-center justify-center">
@@ -91,7 +79,7 @@ export default function DescriptionSection(): React.JSX.Element {
         <div className="mt-10 text-center gap-y-4">
           <h3 className="text-2xl font-semibold text-gray-900 mb-6 ">Learn more</h3>
           <div className="flex justify-center">
-            <a href="https://github.com/sb-ncbr/FFFold/wiki" target="_blank" rel="noreferrer">
+            <a href="https://github.com/sb-ncbr/proptimus_live/wiki" target="_blank" rel="noreferrer">
               <Card className="p-6 m-2 transition hover:shadow-lg hover:bg-accent transition-shadow duration-200 ease-out cursor-pointer max-w-md">
                 <div className="flex items-center justify-center gap-4">
                   <div className="flex items-center gap-2">

@@ -24,7 +24,7 @@ export default function Header(): React.JSX.Element {
 
           {/* Manual Link & GitHub Avatar */}
           <div className="flex items-center gap-4">
-            <a href="https://github.com/sb-ncbr/FFFold" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/sb-ncbr/proptimus_live" target="_blank" rel="noopener noreferrer">
               <Avatar.Root className="w-8 h-8 rounded-full border border-gray-300 overflow-hidden flex items-center justify-center bg-white">
                 <Avatar.Image
                   src="/assets/img/github-mark.png"

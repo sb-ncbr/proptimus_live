@@ -11,7 +11,7 @@ export const config = {
   },
   meta: {
     title: "PROPTIMUS - Web application for the local optimisation of protein structures",
-    description: "PROPTIMUS LIVE is a web application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. Optimisation is performed by the physics-based GFN-Force-Field and accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
+    description: "PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
     keywords: [
       "PROPTIMUS",
       "Protein Structure Optimization",
@@ -53,8 +53,8 @@ export const config = {
   },
   contact: {
     email: "ondrej.schindler@mail.muni.cz",
-    github: "https://github.com/sb-ncbr/FFFold",
-    support: "https://github.com/sb-ncbr/FFFold/issues",
+    github: "https://github.com/sb-ncbr/proptimus_live",
+    support: "https://github.com/sb-ncbr/proptimus_live/issues",
   },
   features: [
     "Structure-based protein search",

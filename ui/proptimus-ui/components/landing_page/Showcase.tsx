@@ -4,31 +4,75 @@ export default function Showcase(): React.JSX.Element {
   const showcase_items = [
     {
       id: 1,
-      name: "Bond length",
+      name: "Wrongly predicted atoms",
       imageSrc: "/assets/showcase/bond_length.png",
-      description:
-        "The bond length between CA and H atoms in MET1 is modified about 0.1 angstrom. On average, the bond lengths in MET1 are optimized by 0.05 angstrom.",
+      description: (
+      <>
+        Fixing non-physically predicted atoms NH1 and NH2 of arginine 22 in structure {" "}
+        <a 
+          href="https://proptimus.ceitec.cz/results?query=A4QJE9_7.0" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="font-semibold underline"
+        >
+          A4QJE9
+        </a>.
+      </>
+    ),
     },
     {
       id: 2,
-      name: "Dihedral angles",
+      name: "Bond lengths and angles",
       imageSrc: "/assets/showcase/dihedral.png",
-      description:
-        "Dihedral angles in THR126 between atoms OG1, CB, CG2 and hydrogens HG21, HG22, HG23 are optimised from energetically unfavourable eclipsed conformation.",
+      description: (
+      <>
+        Optimization of threonine 555 in an almost eclipsed conformation in the structure {" "}
+        <a 
+          href="https://proptimus.ceitec.cz/results?query=Q57N56_7.0" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="font-semibold underline"
+        >
+          Q57N56
+        </a>.
+      </>
+    ),
     },
     {
       id: 3,
       name: "Hydrogen bond",
       imageSrc: "/assets/showcase/hydrogen_bond.png",
-      description:
-        "The hydrogen bond was formed between atoms HD1 from HIS20 and O from GLY86.",
+description: (
+      <>
+        Formation of a hydrogen bond between arginine 369 and glutamine 370 in the structure {" "}
+        <a 
+          href="https://proptimus.ceitec.cz/results?query=B7ZW16_7.0" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="font-semibold underline"
+        >
+          B7ZW16
+        </a>.
+      </>
+    ),
     },
     {
       id: 4,
-      name: "π–π stacking",
+      name: "Cation–π interaction",
       imageSrc: "/assets/showcase/pi_stacking.png",
-      description:
-        "T-shaped π–π stacking is formed between residues PHE90 and HIS461.",
+description: (
+      <>
+        Formation of cation–π interactions of arginine 237 in the structure {" "}
+        <a 
+          href="https://proptimus.ceitec.cz/results?query=Q3M859_7.0" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="font-semibold underline"
+        >
+          Q3M859
+        </a>.
+      </>
+    ),
     },
   ];
 
@@ -36,10 +80,12 @@ export default function Showcase(): React.JSX.Element {
     <div className="w-full max-w-7xl mx-auto px-4 py-16">
       <div className="text-center mb-12">
         <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
-          How PROPTIMUS LIVE improve structures?
+          How PROPTIMUS LIVE improves structures?
         </h2>
-        <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-          Examples of structure improvements are from the structure with Uniprot AC A4QBG9. The original structure from AlphaFold DB is shown in grey, and the structure optimised by PROPTIMUS LIVE is in colour.
+        <p className="text-lg text-gray-600 max-w-5xl mx-auto">
+          Original structures from <a
+                  href="https://alphafold.ebi.ac.uk/" target="_blank"
+                  rel="noreferrer" className="font-semibold underline">AlphaFold DB</a> are colored gray, while structures optimized by PROPTIMUS LIVE are colored.
         </p>
       </div>
 

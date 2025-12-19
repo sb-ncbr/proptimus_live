@@ -44,7 +44,7 @@ queue = Manager().list()
 running = Manager().list()
 optimisers = []
 number_of_processes = 1
-number_of_cpu = 60
+number_of_cpu = 8
 
 
 def get_interresidual_interactions(PDB_file):
@@ -88,45 +88,48 @@ def get_interresidual_interactions(PDB_file):
 
 def optimise_structures():
     while len(queue):
-        ID = queue.pop(0)
-        running.append(ID)
-        code, ph = ID.split('_')
-        data_dir = f'{root_dir}/calculated_structures/{ID}'
-        pdb_file = f'{data_dir}/original.pdb'
-        pdb_file_with_hydrogens = f'{data_dir}/original_addedH.pdb'
+        try:
+            ID = queue.pop(0)
+            running.append(ID)
+            code, ph = ID.split('_')
+            data_dir = f'{root_dir}/calculated_structures/{ID}'
+            pdb_file = f'{data_dir}/original.pdb'
+            pdb_file_with_hydrogens = f'{data_dir}/original_addedH.pdb'
 
-        # estimate calculation time
-        structure = PDBParser(QUIET=True).get_structure(id="structure",
-                                                        file=pdb_file)
-        num_of_atoms = len(list(structure.get_atoms())) * 2
-        estimated_time = num_of_atoms / number_of_cpu + num_of_atoms / 1000 + 30
-        with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
-            timefile.write(str(time() + estimated_time))
+            # estimate calculation time
+            structure = PDBParser(QUIET=True).get_structure(id="structure",
+                                                            file=pdb_file)
+            num_of_atoms = len(list(structure.get_atoms())) * 2
+            estimated_time = num_of_atoms / 15 + 60
+            with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
+                timefile.write(str(time() + estimated_time))
 
-        # correct wrongly placed atoms
-        PrimaryIntegrityMeasuresTaker(Path(pdb_file),
-                                      json_logs_dir=Path(f"{data_dir}")).process_structure()
-        if Path(f"{data_dir}/correction_sicc_af").exists():
-            pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
+            # correct wrongly placed atoms
+            PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                          json_logs_dir=Path(f"{data_dir}")).process_structure()
+            if Path(f"{data_dir}/correction_sicc_af").exists():
+                pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
 
-        # protonate structure
-        os.system(f'pdb2pqr30 --titration-state-method propka '
-                  f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
-                  f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
+            # protonate structure
+            os.system(f'pdb2pqr30 --titration-state-method propka '
+                      f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
+                      f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
-        # optimise structure
-        Raphan(data_dir=data_dir,
-               PDB_file=pdb_file_with_hydrogens,
-               cpu=number_of_cpu,
-               delete_auxiliary_files=True).optimise()
+            # optimise structure
+            Raphan(data_dir=data_dir,
+                   PDB_file=pdb_file_with_hydrogens,
+                   cpu=number_of_cpu,
+                   delete_auxiliary_files=True).optimise()
 
-        os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
+            os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
 
-        with open(f"{data_dir}/interrezidual_interacitons.json", 'w') as inter_residual_interactions_file:
-            json.dump({"original structure": get_interresidual_interactions(pdb_file_with_hydrogens),
-                       "optimised structure": get_interresidual_interactions(f"{data_dir}/optimised.pdb")},
-                      inter_residual_interactions_file,
-                      indent=4)
+            with open(f"{data_dir}/interrezidual_interacitons.json", 'w') as inter_residual_interactions_file:
+                json.dump({"original structure": get_interresidual_interactions(pdb_file_with_hydrogens),
+                           "optimised structure": get_interresidual_interactions(f"{data_dir}/optimised.pdb")},
+                          inter_residual_interactions_file,
+                          indent=4)
+        except:
+            pass
 
         running.remove(ID)
 
@@ -226,7 +229,7 @@ def running_progress():
                 remaining_seconds = float(timefile.read()) - time()
                 if remaining_seconds < 0:
                     remaining_time = "The calculation is taking longer than usual. If the calculation does not finish soon, please contact us."
-                if remaining_seconds < 60:
+                elif remaining_seconds < 60:
                     remaining_time = "less then 1 minute"
                 else:
                     remaining_time = f"{round(remaining_seconds / 60)} minutes"
