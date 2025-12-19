@@ -100,7 +100,7 @@ def optimise_structures():
             structure = PDBParser(QUIET=True).get_structure(id="structure",
                                                             file=pdb_file)
             num_of_atoms = len(list(structure.get_atoms())) * 2
-            estimated_time = num_of_atoms / 15 + 60
+            estimated_time = num_of_atoms / 10 + 60
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 

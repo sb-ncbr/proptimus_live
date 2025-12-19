@@ -71,7 +71,7 @@ export function OptimizationLoader({
         <div className="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
           {remaining_time && (
             <p className="text-base font-medium text-gray-700 dark:text-gray-300">
-              ⏱️ Estimated time: {remaining_time}
+              ⏱️ Estimated remaining time: {remaining_time}
             </p>
           )}
           {status === 'queued' && (
