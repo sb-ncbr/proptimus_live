@@ -44,7 +44,7 @@ queue = Manager().list()
 running = Manager().list()
 optimisers = []
 number_of_processes = 1
-number_of_cpu = 60
+number_of_cpu = 59
 
 
 def get_interresidual_interactions(PDB_file):
