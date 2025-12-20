@@ -26,7 +26,7 @@ export default function Showcase(): React.JSX.Element {
       imageSrc: "/assets/showcase/dihedral.png",
       description: (
       <>
-        Optimization of threonine 555 in an almost eclipsed conformation in the structure {" "}
+        Optimisation of threonine 555 from an almost eclipsed conformation in the structure {" "}
         <a 
           href="https://proptimus.ceitec.cz/results?query=Q57N56_7.0" 
           target="_blank" 

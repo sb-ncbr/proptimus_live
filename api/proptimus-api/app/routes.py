@@ -44,7 +44,7 @@ queue = Manager().list()
 running = Manager().list()
 optimisers = []
 number_of_processes = 1
-number_of_cpu = 59
+number_of_cpu = 60
 
 
 def get_interresidual_interactions(PDB_file):
@@ -99,21 +99,28 @@ def optimise_structures():
             # estimate calculation time
             structure = PDBParser(QUIET=True).get_structure(id="structure",
                                                             file=pdb_file)
-            num_of_atoms = len(list(structure.get_atoms())) * 2
+            atoms = list(structure.get_atoms())
+            num_of_atoms = len(atoms) * 2
             estimated_time = num_of_atoms / 10 + 60
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 
             # correct wrongly placed atoms
-            PrimaryIntegrityMeasuresTaker(Path(pdb_file),
-                                          json_logs_dir=Path(f"{data_dir}")).process_structure()
-            if Path(f"{data_dir}/correction_sicc_af").exists():
-                pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
+            try:
+                PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                              json_logs_dir=Path(f"{data_dir}")).process_structure()
+                if Path(f"{data_dir}/correction_sicc_af").exists():
+                    pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
+            except KeyError:
+                pass
 
             # protonate structure
-            os.system(f'pdb2pqr30 --titration-state-method propka '
-                      f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
-                      f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
+            if all(atom.element != "H" for atom in atoms):
+                os.system(f'pdb2pqr30 --titration-state-method propka '
+                          f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
+                          f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
+            else:
+                os.system(f"cp {pdb_file} {pdb_file_with_hydrogens}")
 
             # optimise structure
             Raphan(data_dir=data_dir,
