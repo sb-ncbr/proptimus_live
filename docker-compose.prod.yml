@@ -1,0 +1,69 @@
+services:
+  traefik:
+        image: traefik:3.6
+        command:
+          - '--log.level=INFO'
+          #- '--log.level=DEBUG'
+          - '--api.insecure=false'
+          - '--providers.docker=true'
+          - '--providers.docker.exposedbydefault=false'
+          - '--providers.file.directory=/configuration/'
+          - '--entrypoints.web.address=:80'
+          - '--entrypoints.websecure.address=:443'
+          # Redirection http to https for all services
+          - '--entrypoints.web.http.redirections.entrypoint.to=websecure'
+          - '--entrypoints.web.http.redirections.entrypoint.scheme=https'
+        restart: unless-stopped
+        ports:
+         - '80:80'
+         - '443:443'
+         - "8080:8080" # Traefik dashboard
+        volumes:
+         - '/var/run/docker.sock:/var/run/docker.sock:ro'
+         - './traefik/configuration:/configuration'
+         - './traefik/certificates:/certificates:ro'
+
+  proptimus-api:
+    image: registry.gitlab.ics.muni.cz:443/ceitec-cf-biodata/proptimus/proptimus-api:production
+    expose:
+      - 80
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=routes.py
+      - FLASK_DEBUG=1
+      - CORS_ORIGINS=http://147.251.245.48,http://proptimus.ceitec.cz,https://proptimus.ceitec.cz
+    depends_on:
+      - traefik
+    volumes:
+      - ./storage/calculated_structures:/app/app/calculated_structures:rw
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.proptimus-api.tls=true'
+      - 'traefik.http.routers.proptimus-api.entrypoints=websecure'
+      - 'traefik.http.routers.proptimus-api.priority=2'
+      - 'traefik.http.routers.proptimus-api.rule=Host(`proptimus.ceitec.cz`) && PathPrefix(`/api`)'
+      # strip /api before sending request to container
+      - 'traefik.http.routers.proptimus-api.middlewares=proptimus-api-stripprefix'
+      - 'traefik.http.middlewares.proptimus-api-stripprefix.stripPrefix.prefixes=/api'
+    #healthcheck:
+    #  test: ["CMD", "curl", "-f", "http://localhost/"]
+    #  interval: 30s
+    #  timeout: 10s
+    #  retries: 3
+
+  proptimus-ui:
+    image: registry.gitlab.ics.muni.cz:443/ceitec-cf-biodata/proptimus/proptimus-ui:production
+    environment:
+      - NEXT_PUBLIC_APP_NAME=Proptimus
+      - NEXT_PUBLIC_API_URL=http://proptimus.ceitec.cz/api
+    depends_on:
+      - traefik
+      - proptimus-api
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.proptimus-ui.tls=true'
+      - 'traefik.http.routers.proptimus-ui.entrypoints=websecure'
+      - 'traefik.http.routers.proptimus-ui.priority=1'
+      - 'traefik.http.routers.proptimus-ui.rule=Host(`proptimus.ceitec.cz`) && !PathPrefix(`/api`)'

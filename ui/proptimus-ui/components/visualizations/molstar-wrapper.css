@@ -1,0 +1,33 @@
+/* MolStar wrapper styles */
+.molstar-wrapper .msp-plugin {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.molstar-wrapper.molstar-no-ui .msp-layout-main .msp-layout-top {
+  display: none !important;
+}
+
+.molstar-wrapper.molstar-no-ui .msp-viewport-controls {
+  display: none !important;
+}
+
+/* Ensure proper sizing */
+.molstar-wrapper canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.molstar-wrapper .msp-plugin .msp-layout-standard {
+  border: none;
+}
+
+.molstar-wrapper .msp-plugin .msp-snapshot-description-wrapper {
+  display: none;
+}
+
+.molstar-no-ui .msp-viewport-top-left-controls {
+  display: none;
+}
