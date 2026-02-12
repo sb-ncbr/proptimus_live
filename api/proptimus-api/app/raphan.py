@@ -375,8 +375,8 @@ class Raphan:
         for residue_index, residue in enumerate(self.structure.get_residues(), start=1):
             system(f"mkdir {self.data_dir}/sub_{residue_index}")
             atoms_in_30A = kdtree.search(center=residue.center_of_mass(geometric=True),
-                                      radius=30, # radius of AMK (6A) + outer substructure radius (12A) + maximum shift of atom (10A) + extra (2A)
-                                      level="A")
+                                         radius=30, # radius of AMK (6A) + outer substructure radius (12A) + maximum shift of atom (10A) + extra (2A)
+                                         level="A")
             selector = AtomSelector()
             selector.full_ids = set([atom.full_id for atom in atoms_in_30A])
             selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_30A])

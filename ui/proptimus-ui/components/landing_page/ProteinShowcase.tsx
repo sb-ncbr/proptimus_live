@@ -108,7 +108,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       fullDescription:
         "PROPTIMUS LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by physics-based GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
       imageSrc: schema,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
     {
       id: 2,
@@ -118,7 +118,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       fullDescription:
         "The RAPHAN method produces structures comparable to structures optimised by GFN-Force-Field with constrained α-carbons. The mean absolute deviation of atomic positions is approximately 0.03 Å, and the 99th percentile is 0.33 Å. As can be seen in the histogram, structures may differ exceptionally for highly flexible residues.",
       imageSrc: histogram,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
     {
       id: 3,
@@ -128,7 +128,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       fullDescription:
         "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes with an average speed of 1000 atoms per minute.",
       imageSrc: times,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
   ];
 

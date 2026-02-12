@@ -135,8 +135,8 @@ def optimise_structures():
                            "optimised structure": get_interresidual_interactions(f"{data_dir}/optimised.pdb")},
                           inter_residual_interactions_file,
                           indent=4)
-        except:
-            pass
+        except Exception as e:
+            print(f"Optimisation failed: {e}")
 
         running.remove(ID)
 
