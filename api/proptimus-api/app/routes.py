@@ -47,43 +47,65 @@ number_of_processes = 1
 number_of_cpu = 60
 
 
-def get_interresidual_interactions(PDB_file):
-    inter_residual_interactions = {}
-    biotite_structure = strucio.load_structure(PDB_file,
-                                                extra_fields=["charge"],
-                                                include_bonds=True)
-    biopython_structure = PDBParser(QUIET=True).get_structure("structure", PDB_file)
-    inter_residual_interactions["H-bonds"] = len(struc.hbond(biotite_structure))
-    inter_residual_interactions["pi-pi interactions"] = len(struc.find_stacking_interactions(biotite_structure))
-    kdtree = NeighborSearch(list(biopython_structure.get_atoms()))
-    for atom in biopython_structure.get_atoms():
-        atom.chg = 0
-        if atom.name == "N":
-            near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
-                          atom.get_parent() == near_atom.get_parent()]
-            if len(near_atoms) == 5:
-                atom.chg = 1
-        elif atom.name == "NZ" and atom.get_parent().resname == "LYS":
-            near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
-                          atom.get_parent() == near_atom.get_parent()]
-            if len(near_atoms) == 5:
-                atom.chg = 1
-        elif atom.name == "CZ" and atom.get_parent().resname == "ARG":
-            bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
-                                atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
-            if len(bonded_hydrogens) == 5:
-                atom.chg = 1
-        elif atom.name == "CE1" and atom.get_parent().resname == "HIS":
-            bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
-                                atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
-            if len(bonded_hydrogens) == 3:
-                atom.chg = 1
-    charges = []
-    for coord in biotite_structure.coord:
-        charges.append(kdtree.search(coord, radius=0.1, level="A")[0].chg)
-    biotite_structure.charge = charges
-    inter_residual_interactions["pi-cation interactions"] = len(struc.find_pi_cation_interactions(biotite_structure))
-    return inter_residual_interactions
+def calculate_statistics(original_PDB_file,
+                         optimised_PDB_file,
+                         data_dir):
+    interactions = {}
+    biopython_structures = []
+    for PDB_file, tag in zip([original_PDB_file, optimised_PDB_file], ["original", "optimised"]):
+        biotite_structure = strucio.load_structure(PDB_file,
+                                                   extra_fields=["charge"],
+                                                   include_bonds=True,
+                                                   model=1)
+        biopython_structure = PDBParser(QUIET=True).get_structure("structure", PDB_file)[0]
+        biopython_structures.append(biopython_structure)
+        interactions[f"hbonds {tag}"] = len(struc.hbond(biotite_structure))
+        interactions[f"pipi {tag}"] = len(struc.find_stacking_interactions(biotite_structure))
+        kdtree = NeighborSearch(list(biopython_structure.get_atoms()))
+        for atom in biopython_structure.get_atoms():
+            atom.chg = 0
+            if atom.name == "N":
+                near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
+                              atom.get_parent() == near_atom.get_parent()]
+                if len(near_atoms) == 5:
+                    atom.chg = 1
+            elif atom.name == "NZ" and atom.get_parent().resname == "LYS":
+                near_atoms = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=1.75, level="A") if
+                              atom.get_parent() == near_atom.get_parent()]
+                if len(near_atoms) == 5:
+                    atom.chg = 1
+            elif atom.name == "CZ" and atom.get_parent().resname == "ARG":
+                bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
+                                    atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
+                if len(bonded_hydrogens) == 5:
+                    atom.chg = 1
+            elif atom.name == "CE1" and atom.get_parent().resname == "HIS":
+                bonded_hydrogens = [near_atom for near_atom in kdtree.search(center=atom.coord, radius=2.25, level="A") if
+                                    atom.get_parent() == near_atom.get_parent() and near_atom.element == "H"]
+                if len(bonded_hydrogens) == 3:
+                    atom.chg = 1
+        charges = []
+        for coord in biotite_structure.coord:
+            charges.append(kdtree.search(coord, radius=0.1, level="A")[0].chg)
+        biotite_structure.charge = charges
+        interactions[f"catpi {tag}"] = len(struc.find_pi_cation_interactions(biotite_structure))
+    interactions["number of atoms"] = len(list(biopython_structure.get_atoms()))
+    with open(f"{data_dir}/interrezidual_interactions.json", 'w') as interresidual_interactions_file:
+        json.dump(interactions,
+                  interresidual_interactions_file,
+                  indent = 4)
+
+    differences = []
+    for atom1, atom2 in zip(biopython_structures[0].get_atoms(),
+                            biopython_structures[1].get_atoms()):
+        differences.append({"chainId": atom1.get_parent().get_parent().id,
+                            "residueId": atom1.get_parent().id[1],
+                            "atomId": atom1.id,
+                            "value": float(atom1 - atom2)})
+    with open(f"{data_dir}/differences.json", 'w') as differences_file:
+        json.dump(differences,
+                  differences_file,
+                  indent = 4)
 
 
 def optimise_structures():
@@ -98,24 +120,23 @@ def optimise_structures():
 
             # estimate calculation time
             structure = PDBParser(QUIET=True).get_structure(id="structure",
-                                                            file=pdb_file)
+                                                            file=pdb_file)[0]
             atoms = list(structure.get_atoms())
             num_of_atoms = len(atoms) * 2
             estimated_time = num_of_atoms / 10 + 60
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 
-            # correct wrongly placed atoms
-            try:
-                PrimaryIntegrityMeasuresTaker(Path(pdb_file),
-                                              json_logs_dir=Path(f"{data_dir}")).process_structure()
-                if Path(f"{data_dir}/correction_sicc_af").exists():
-                    pdb_file = glob(f"{data_dir}/correction_sicc_af/*.pdb")[0]
-            except KeyError:
-                pass
-
-            # protonate structure
+            # if no hydrogens are present in the protein structure correct wrongly placed atoms and protonate structure
             if all(atom.element != "H" for atom in atoms):
+                try:
+                    PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                                  json_logs_dir=Path(f"{data_dir}")).process_structure()
+                    if Path(f"{data_dir}/correction_sicc_af").exists():
+                        pdb_file = glob(f"{data_dir}/correction_sicc_af/original_corrected.pdb")[0]
+                except KeyError:
+                    pass
+
                 os.system(f'pdb2pqr30 --titration-state-method propka '
                           f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
                           f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
@@ -130,16 +151,14 @@ def optimise_structures():
 
             os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
 
-            with open(f"{data_dir}/interrezidual_interacitons.json", 'w') as inter_residual_interactions_file:
-                json.dump({"original structure": get_interresidual_interactions(pdb_file_with_hydrogens),
-                           "optimised structure": get_interresidual_interactions(f"{data_dir}/optimised.pdb")},
-                          inter_residual_interactions_file,
-                          indent=4)
+            calculate_statistics(original_PDB_file=pdb_file_with_hydrogens,
+                                 optimised_PDB_file=f"{data_dir}/optimised.pdb",
+                                 data_dir=data_dir)
+
         except Exception as e:
             print(f"Optimisation failed: {e}")
 
         running.remove(ID)
-
 
 
 @application.route('/', methods=['GET', 'POST'])
@@ -271,18 +290,14 @@ def running_progress():
 @application.route('/api/interactions/<ID>', methods=['GET'])
 def get_interactions(ID: str):
     try:
-        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interacitons.json", 'r') as inter_residual_interactions_file:
-            inter_residual_interactions = json.load(inter_residual_interactions_file)
+        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interactions.json", 'r') as interactions_file:
+            interactions = json.load(interactions_file)
+        return jsonify(interactions)
     except FileNotFoundError:
         return jsonify({"status": "not applicable",
                         "message": f"No results for ID {ID}."}), 406
 
-    return jsonify({"hbonds original": inter_residual_interactions["original structure"]["H-bonds"],
-                    "hbonds optimised": inter_residual_interactions["optimised structure"]["H-bonds"],
-                    "pipi original": inter_residual_interactions["original structure"]["pi-pi interactions"],
-                    "pipi optimised": inter_residual_interactions["optimised structure"]["pi-pi interactions"],
-                    "catpi original": inter_residual_interactions["original structure"]["pi-cation interactions"],
-                    "catpi optimised": inter_residual_interactions["optimised structure"]["pi-cation interactions"]})
+
 
 @application.route('/download_files')
 def download_files():
