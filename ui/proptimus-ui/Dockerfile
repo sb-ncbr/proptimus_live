@@ -34,6 +34,9 @@ RUN echo "=== BUILD ENVIRONMENT VARIABLES ===" && \
     echo "NEXT_PUBLIC_APP_NAME: $NEXT_PUBLIC_APP_NAME" && \
     echo "=== END BUILD ENV VARS ==="
 
+# Limit Node.js memory to trigger GC earlier instead of getting OOM-killed
+ENV NODE_OPTIONS="--max-old-space-size=1536"
+
 RUN pnpm build
 
 FROM node:24-alpine AS runner
