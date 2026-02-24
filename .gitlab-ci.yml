@@ -32,7 +32,9 @@ build-api-image:
         --destination "${API_IMAGE_NAME}:${IMAGE_TAG}" \
         --destination "${API_IMAGE_NAME}:${PROD_TAG}" \
         --cache=true \
-        --cache-ttl=168h
+        --cache-ttl=168h \
+        --snapshot-mode=redo \
+        --compressed-caching=false
   after_script:
     - rm -f /kaniko/.docker/config.json
   rules:
@@ -58,7 +60,9 @@ build-ui-image:
         --destination "${UI_IMAGE_NAME}:${IMAGE_TAG}" \
         --destination "${UI_IMAGE_NAME}:${PROD_TAG}" \
         --cache=true \
-        --cache-ttl=168h
+        --cache-ttl=168h \
+        --snapshot-mode=redo \
+        --compressed-caching=false
   after_script:
     - rm -f /kaniko/.docker/config.json
   rules:

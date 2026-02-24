@@ -1,8 +1,7 @@
 FROM node:24-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-RUN apk add --no-cache git ca-certificates
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
