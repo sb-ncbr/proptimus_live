@@ -25,8 +25,14 @@ RUN /opt/miniconda3/bin/conda config --set channel_priority strict && \
     /opt/miniconda3/bin/conda config --add channels conda-forge
 
 # Install xtb and openbabel via conda-forge only.
-# FIX: Explicitly specify python=3.11 to avoid the Conda solver picking an incompatible version (like 3.13)
-RUN /opt/miniconda3/bin/conda install -y -c conda-forge python=3.11 xtb openbabel=3.1.1 pdb2pqr && \
+# Split into separate installs to reduce peak memory usage of the conda solver.
+RUN /opt/miniconda3/bin/conda install -y -c conda-forge python=3.11 && \
+    /opt/miniconda3/bin/conda clean -afy
+
+RUN /opt/miniconda3/bin/conda install -y -c conda-forge xtb && \
+    /opt/miniconda3/bin/conda clean -afy
+
+RUN /opt/miniconda3/bin/conda install -y -c conda-forge openbabel=3.1.1 pdb2pqr && \
     /opt/miniconda3/bin/conda clean -afy
 
 # Add conda binaries to PATH
