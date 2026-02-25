@@ -70,10 +70,12 @@ class AtomSelector(Select):
 class Substructure_data:
     def __init__(self,
                  data_dir,
+                 residue_id,
                  optimised_residue_index,
                  optimised_atoms,
                  final_optimised_atoms):
-        self.data_dir = Path(data_dir)
+        self.data_dir = data_dir
+        self.residue_id = residue_id
         self.optimised_residue_index = optimised_residue_index
         self.archive = []
         self.converged = False
@@ -324,8 +326,8 @@ class Raphan:
                 for optimised_coordinates, convergence, substructure_data in iteration_results:
                     if optimised_coordinates is None and convergence is None and substructure_data is None:  # xtb did not converge
                         continue
-                    self.substructures_data[substructure_data.optimised_residue_index - 1].archive.append(optimised_coordinates)
-                    self.substructures_data[substructure_data.optimised_residue_index - 1].converged = convergence
+                    self.substructures_data[substructure_data.optimised_residue_index].archive.append(optimised_coordinates)
+                    self.substructures_data[substructure_data.optimised_residue_index].converged = convergence
                 for i, atom in enumerate(self.structure.get_atoms()):
                     atom.coord = coordinates[i*3:i*3+3]
                 step = self.structure[0].copy()
@@ -346,8 +348,8 @@ class Raphan:
                 for optimised_coordinates, convergence, substructure_data in iteration_results:
                     if optimised_coordinates is None and convergence is None and substructure_data is None:  # xtb did not converge
                         continue
-                    self.substructures_data[substructure_data.optimised_residue_index - 1].archive.append(optimised_coordinates)
-                    self.substructures_data[substructure_data.optimised_residue_index - 1].converged = convergence
+                    self.substructures_data[substructure_data.optimised_residue_index].archive.append(optimised_coordinates)
+                    self.substructures_data[substructure_data.optimised_residue_index].converged = convergence
                 for i, atom in enumerate(self.structure.get_atoms()):
                     atom.coord = coordinates[i*3:i*3+3]
                 step = self.structure[0].copy()
@@ -361,22 +363,23 @@ class Raphan:
             bar.close()
             self.iterations = iteration
 
-            # control of unconverged residues
-            unconverged_substructures = [str(substructure_data.optimised_residue_index) for substructure_data in self.substructures_data if not substructure_data.converged]
-            if unconverged_substructures:
-                print(f"WARNING! OPTIMISATION FOR RESIDUE(S) WITH INDICE(S) {', '.join(unconverged_substructures)} DID NOT CONVERGE!")
+        # control of unconverged residues
+        self.unconverged_residues_ids = [substructure_data.residue_id for substructure_data in self.substructures_data if not substructure_data.converged]
+        if self.unconverged_residues_ids:
+            formatted_unconverged_residues = "; ".join(f"{res['chain_id']}:{res['residue_id']}:{res['residue_name']}" for res in self.unconverged_residues_ids)
+            print(f"WARNING! OPTIMISATION FOR RESIDUE(S) {formatted_unconverged_residues} DID NOT CONVERGE!")
 
-        print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/{Path(self.PDB_file).stem}_optimised.pdb... ", end="", flush=True)
+        print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/optimised.pdb... ", end="", flush=True)
         for atom in self.structure.get_atoms():
             atom.coord = coordinates[(atom.serial_number - 1) * 3:(atom.serial_number - 1) * 3 + 3]
-        self.io.save(str(self.data_dir / "optimised_PDB" / f"{Path(self.PDB_file).stem}_optimised.pdb"))
+        self.io.save(str(self.data_dir / "optimised_PDB" / "optimised.pdb"))
         self.io.set_structure(self.trajectory)
         self.io.save(str(self.data_dir / "optimised_PDB" / "trajectory.pdb"))
         print("ok")
 
         if self.delete_auxiliary_files:
             print("Deleting auxiliary files...", end="")
-            final_pdb = self.data_dir / "optimised_PDB" / f"{Path(self.PDB_file).stem}_optimised.pdb"
+            final_pdb = self.data_dir / "optimised_PDB" / "optimised.pdb"
             final_pdb.replace(self.data_dir / final_pdb.name)
             trajectory = self.data_dir / "optimised_PDB" / "trajectory.pdb"
             trajectory.replace(self.data_dir / trajectory.name)
@@ -388,43 +391,48 @@ class Raphan:
     def _load_molecule(self):
         print(f"Loading of structure from {self.PDB_file}... ", end="", flush=True)
 
-        # open PDB file by Biopython
-        try:
-            structure = PDBParser(QUIET=True).get_structure("structure", self.PDB_file)[0]
-            for i, atom in enumerate(structure.get_atoms(), start=1):
-                atom.serial_number = i
-            io = PDBIO()
-            io.set_structure(structure)
-            self.io = io
-            self.structure = io.structure
-            self.trajectory = Structure.Structure("MultiModel")
-            start = self.structure[0].copy()
-            start.id = 1
-            start.serial_num = 2
-            self.trajectory.add(start)
-        except KeyError:
-            exit(f"\nERROR! PDB file {self.PDB_file} does not contain any structure or file is corrupted.\n")
-
         # creation of data directories
         self.data_dir.mkdir(parents=True, exist_ok=True)
         (self.data_dir / "input_PDB").mkdir(exist_ok=True)
         (self.data_dir / "optimised_PDB").mkdir(exist_ok=True)
         shutil.copy(self.PDB_file, self.data_dir / "input_PDB")
-        print("ok")
+
+        # open PDB file by Biopython and save it back to repair errors (e.g. wrong serial numbers of atoms)
+        try:
+            structure = PDBParser(QUIET=True).get_structure("structure", self.PDB_file)
+            repaired_PDB_file = str(self.data_dir / "input_PDB" / f"{Path(self.PDB_file).stem}_biopython.pdb")
+            io = PDBIO()
+            io.set_structure(structure)
+            io.save(repaired_PDB_file)
+        except KeyError:
+            exit(f"\nERROR! PDB file {self.PDB_file} does not contain any structure or file is corrupted.\n")
+
+        # load structure
+        structure = PDBParser(QUIET=True).get_structure("structure", repaired_PDB_file)[0]
+        io = PDBIO()
+        io.set_structure(structure)
+        self.io = io
+        self.structure = io.structure
+        self.trajectory = Structure.Structure("MultiModel")
+        start = self.structure[0].copy()
+        start.id = 1
+        start.serial_num = 2
+        self.trajectory.add(start)
 
         # prepared substructures data for optimisation
         self.substructures_data = []
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
 
-        for residue_index, residue in enumerate(self.structure.get_residues(), start=1):
-            (self.data_dir / f"sub_{residue_index}").mkdir(exist_ok=True)
+        for residue_index, residue in enumerate(self.structure.get_residues()):
+            substructure_data_dir = self.data_dir / f"sub_{residue.get_parent().id}_{residue.id[1]}_{residue.resname}"
+            substructure_data_dir.mkdir(exist_ok=True)
             atoms_in_30A = kdtree.search(center=residue.center_of_mass(geometric=True),
                                          radius=30, # radius of AMK (6A) + outer substructure radius (12A) + maximum shift of atom (10A) + extra (2A)
                                          level="A")
             selector = AtomSelector()
             selector.full_ids = set([atom.full_id for atom in atoms_in_30A])
             selector.res_full_ids = set([atom.get_parent().full_id for atom in atoms_in_30A])
-            self.io.save(file=str(self.data_dir / f"sub_{residue_index}" / "atoms_in_30A.pdb"),
+            self.io.save(file=str(substructure_data_dir / "atoms_in_30A.pdb"),
                          select=selector,
                          preserve_atom_numbering=True)
 
@@ -444,10 +452,15 @@ class Raphan:
             else:  # heteroresidue
                 for atom in residue:
                     optimised_atoms.add(atom.serial_number)
-            self.substructures_data.append(Substructure_data(data_dir=self.data_dir / f"sub_{residue_index}",
+            self.substructures_data.append(Substructure_data(data_dir=substructure_data_dir,
+                                                             residue_id={"chain_id": residue.get_parent().id,
+                                                                         "residue_id": residue.id[1],
+                                                                         "residue_name": residue.resname},
                                                              optimised_residue_index=residue_index,
                                                              optimised_atoms=optimised_atoms,
                                                              final_optimised_atoms=set([atom.serial_number for atom in residue])))
+        print("ok")
+
 
 
 def run_constrained_alpha_optimisations(raphan):
@@ -480,7 +493,7 @@ def run_constrained_alpha_optimisations(raphan):
     (raphan.data_dir / "constrained_alpha_carbons_optimisations" / "raphan").mkdir(parents=True, exist_ok=True)
     with open(raphan.data_dir / "constrained_alpha_carbons_optimisations/raphan/xtb_settings.inp", "w") as xtb_settings_file:
         xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {','.join(alpha_carbons_indices)}\n$end")
-    subprocess.run(["xtb", f"../../optimised_PDB/{Path(raphan.PDB_file).stem}_optimised.pdb", "--opt", "--alpb", "water", "--gfnff", "--input", "xtb_settings.inp", "--verbose"],
+    subprocess.run(["xtb", f"../../optimised_PDB/optimised.pdb", "--opt", "--alpb", "water", "--gfnff", "--input", "xtb_settings.inp", "--verbose"],
                    cwd=raphan.data_dir / "constrained_alpha_carbons_optimisations" / "raphan",
                    stdout=open(raphan.data_dir / "constrained_alpha_carbons_optimisations/raphan/xtb_output.txt", "w"),
                    stderr=open(raphan.data_dir / "constrained_alpha_carbons_optimisations/raphan/xtb_error_output.txt", "w"),
@@ -506,7 +519,7 @@ def run_constrained_alpha_optimisations(raphan):
     # compare structure optimised by PROPTIMUS RAPHANgfnff and structure optimised by PROPTIMUS RAPHANgfnff + GFNFFca
     try:
         s1 = PDBParser(QUIET=True).get_structure(id="structure",
-                                                 file=raphan.data_dir / "optimised_PDB" / f"{Path(raphan.PDB_file).stem}_optimised.pdb")
+                                                 file=raphan.data_dir / "optimised_PDB" / "optimised.pdb")
         s2 = PDBParser(QUIET=True).get_structure(id="structure",
                                                  file=raphan.data_dir / "constrained_alpha_carbons_optimisations/raphan/xtbopt.pdb")
         sup = Superimposer()

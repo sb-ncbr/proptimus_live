@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 import zipfile
+from collections import defaultdict
 from datetime import datetime
 from glob import glob
 from multiprocessing import Process, Manager
@@ -47,20 +48,35 @@ number_of_processes = 1
 number_of_cpu = 60
 
 
-def calculate_statistics(original_PDB_file,
-                         optimised_PDB_file,
-                         data_dir):
+def residue_id(biotite_structure, atom_index):
+    return (str(biotite_structure.chain_id[atom_index]),
+            int(biotite_structure.res_id[atom_index]),
+            str(biotite_structure.res_name[atom_index]))
+
+
+def write_additional_info(original_PDB_file,
+                          optimised_PDB_file,
+                          unconverged_residues_ids,
+                          data_dir):
+    # interresidual interactions
+    sum_interactions = {}
     interactions = {}
-    biopython_structures = []
+    biopython_structures = {}
+    biotite_structures = {}
     for PDB_file, tag in zip([original_PDB_file, optimised_PDB_file], ["original", "optimised"]):
         biotite_structure = strucio.load_structure(PDB_file,
                                                    extra_fields=["charge"],
                                                    include_bonds=True,
                                                    model=1)
+        biotite_structures[tag] = biotite_structure
         biopython_structure = PDBParser(QUIET=True).get_structure("structure", PDB_file)[0]
-        biopython_structures.append(biopython_structure)
-        interactions[f"hbonds {tag}"] = len(struc.hbond(biotite_structure))
-        interactions[f"pipi {tag}"] = len(struc.find_stacking_interactions(biotite_structure))
+        biopython_structures[tag] = biopython_structure
+        hbonds = struc.hbond(biotite_structure)
+        sum_interactions[f"hbonds {tag}"] = len(hbonds)
+        interactions[f"hbonds {tag}"] = set(tuple(residue_id(biotite_structure, atom_index) for atom_index in sorted([hbond[0], hbond[2]])) for hbond in hbonds)
+        pipi_interactions = struc.find_stacking_interactions(biotite_structure)
+        sum_interactions[f"pipi {tag}"] = len(pipi_interactions)
+        interactions[f"pipi {tag}"] = set(tuple(residue_id(biotite_structure, atom_index) for atom_index in sorted([pipi[0][0], pipi[1][0]])) for pipi in pipi_interactions)
         kdtree = NeighborSearch(list(biopython_structure.get_atoms()))
         for atom in biopython_structure.get_atoms():
             atom.chg = 0
@@ -88,23 +104,94 @@ def calculate_statistics(original_PDB_file,
         for coord in biotite_structure.coord:
             charges.append(kdtree.search(coord, radius=0.1, level="A")[0].chg)
         biotite_structure.charge = charges
-        interactions[f"catpi {tag}"] = len(struc.find_pi_cation_interactions(biotite_structure))
-    interactions["number of atoms"] = len(list(biopython_structure.get_atoms()))
+        catpi_interactions = struc.find_pi_cation_interactions(biotite_structure)
+        sum_interactions[f"catpi {tag}"] = len(catpi_interactions)
+        interactions[f"catpi {tag}"] = set(tuple(residue_id(biotite_structure, atom_index) for atom_index in sorted([catpi[0][0], catpi[1]])) for catpi in catpi_interactions)
+    sum_interactions["number of atoms"] = len(list(biopython_structure.get_atoms()))
     with open(f"{data_dir}/interrezidual_interactions.json", 'w') as interresidual_interactions_file:
-        json.dump(interactions,
+        json.dump(sum_interactions,
                   interresidual_interactions_file,
                   indent = 4)
 
+    # coloring structure according change during optimisation
     differences = []
-    for atom1, atom2 in zip(biopython_structures[0].get_atoms(),
-                            biopython_structures[1].get_atoms()):
-        differences.append({"chainId": atom1.get_parent().get_parent().id,
-                            "residueId": atom1.get_parent().id[1],
-                            "atomId": atom1.id,
+    for atom1, atom2 in zip(biopython_structures["original"].get_atoms(),
+                            biopython_structures["optimised"].get_atoms()):
+        differences.append({"chain_id": atom1.get_parent().get_parent().id,
+                            "residue_id": atom1.get_parent().id[1],
+                            "atom_id": atom1.id,
                             "value": float(atom1 - atom2)})
     with open(f"{data_dir}/differences.json", 'w') as differences_file:
         json.dump(differences,
                   differences_file,
+                  indent = 4)
+
+    # data for tables with logs
+    # repair of residues
+    repair_logs = {}
+    try:
+        with open(f"{data_dir}/prime_log.json", 'r', encoding='utf-8') as prime_log_file:
+            prime_logs = json.load(prime_log_file)
+            residues = list(biopython_structure.get_residues())
+            for side_chain_error in prime_logs["side_chain_errors"]["list"]:
+                for residue_index in side_chain_error["affected_residues"]:
+                    if side_chain_error["repaired"]:
+                        message = "Residue was repaired."
+                    else:
+                        message = "Residue was not repaired."
+                    repair_logs[residue_index] = {"chain_id": residues[residue_index].get_parent().id,
+                                                  "residue_id": residue_index,
+                                                  "residue_name": residues[residue_index].resname,
+                                                  "message": message}
+            for backbone_error in prime_logs["backbone_errors"]["list"]:
+                residue_index = backbone_error["affected_residues"][0]
+                repair_logs[residue_index] = {"chain_id": residues[residue_index].get_parent().id,
+                                              "residue_id": residue_index,
+                                              "residue_name": residues[residue_index].resname,
+                                              "message": "Residue was not repaired."}
+    except FileNotFoundError:
+        pass
+    repair_logs = sorted(repair_logs.values(), key=lambda x: x["residue_id"])
+    # optimisation issues
+    for unconverged_residue_id in unconverged_residues_ids:
+        unconverged_residue_id["message"] = "Residue was not converged."
+    # interactions
+    interactions_messages = defaultdict(list)
+    for added_hydrogen_bond in interactions["hbonds optimised"] - interactions["hbonds original"]:
+        interactions_messages[added_hydrogen_bond].append("Hydrogen bond(s) was formed.")
+    for added_pipi in interactions["pipi optimised"] - interactions["pipi original"]:
+        interactions_messages[added_pipi].append("π-π interaction was formed.")
+    for added_pipi in interactions["catpi optimised"] - interactions["catpi original"]:
+        interactions_messages[added_pipi].append("Cation-π interaction was formed.")
+    for broken_hydrogen_bond in interactions["hbonds original"] - interactions["hbonds optimised"]:
+        interactions_messages[broken_hydrogen_bond].append("Hydrogen bond(s) was broken.")
+    for broken_pipi in interactions["pipi original"] - interactions["pipi optimised"]:
+        interactions_messages[broken_pipi].append("π-π interaction was broken.")
+    for broken_pipi in interactions["catpi original"] - interactions["catpi optimised"] :
+        interactions_messages[broken_pipi].append("Cation-π interaction was broken.")
+    interactions_logs = []
+    for ((chain_id_1, res_id_1, res_name_1), (chain_id_2, res_id_2, res_name_2)), messages in interactions_messages.items():
+        interactions_logs.append({"chain_id_1": chain_id_1,
+                                  "residue_id_1": res_id_1,
+                                  "residue_name_1": res_name_1,
+                                  "chain_id_2": chain_id_2,
+                                  "residue_id_2": res_id_2,
+                                  "residue_name_2": res_name_2,
+                                  "message": " ".join(messages)})
+    interactions_logs.sort(key=lambda x: (x['chain_id_1'], x['residue_id_1']))
+
+    tables_logs = {"repair":       {"title": "residue repair",
+                                    "no_data_message": "No non-physically predicted atoms detected.",
+                                    "data": repair_logs},
+                   "optimisation": {"title": "Optimisation issues",
+                                    "no_data_message": "No optimisation issues.",
+                                    "data": unconverged_residues_ids},
+                   "interactions": {"title": "Interresidual interactions",
+                                    "no_data_message": "No change.",
+                                    "data": interactions_logs}}
+    with open(f"{data_dir}/tables.json", 'w') as tables_logs_file:
+        json.dump(tables_logs,
+                  tables_logs_file,
                   indent = 4)
 
 
@@ -116,7 +203,7 @@ def optimise_structures():
             code, ph = ID.split('_')
             data_dir = f'{root_dir}/calculated_structures/{ID}'
             pdb_file = f'{data_dir}/original.pdb'
-            pdb_file_with_hydrogens = f'{data_dir}/original_addedH.pdb'
+            prepared_pdb_file = f'{data_dir}/prepared.pdb'
 
             # estimate calculation time
             structure = PDBParser(QUIET=True).get_structure(id="structure",
@@ -127,8 +214,8 @@ def optimise_structures():
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 
-            # if no hydrogens are present in the protein structure correct wrongly placed atoms and protonate structure
-            if all(atom.element != "H" for atom in atoms):
+            # if structure is downloaded from AlphaFold DB, correct it and add hydrogens
+            if len(ID) < 30:
                 try:
                     PrimaryIntegrityMeasuresTaker(Path(pdb_file),
                                                   json_logs_dir=Path(f"{data_dir}")).process_structure()
@@ -138,24 +225,23 @@ def optimise_structures():
                     pass
 
                 os.system(f'pdb2pqr30 --titration-state-method propka '
-                          f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
+                          f'--with-ph {ph} --pdb-output {prepared_pdb_file} {pdb_file} '
                           f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
-            else:
-                os.system(f"cp {pdb_file} {pdb_file_with_hydrogens}")
+                pdb_file = prepared_pdb_file
 
             # optimise structure
-            Raphan(data_dir=data_dir,
-                   PDB_file=pdb_file_with_hydrogens,
-                   cpu=number_of_cpu,
-                   delete_auxiliary_files=True).optimise()
+            raphan = Raphan(data_dir=data_dir,
+                            PDB_file=pdb_file,
+                            cpu=number_of_cpu,
+                            delete_auxiliary_files=True)
+            raphan.optimise()
 
-            os.system(f"mv {data_dir}/original_addedH_optimised.pdb {data_dir}/optimised.pdb")
+            write_additional_info(original_PDB_file=pdb_file,
+                                  optimised_PDB_file=f"{data_dir}/optimised.pdb",
+                                  unconverged_residues_ids=raphan.unconverged_residues_ids,
+                                  data_dir=data_dir)
 
-            calculate_statistics(original_PDB_file=pdb_file_with_hydrogens,
-                                 optimised_PDB_file=f"{data_dir}/optimised.pdb",
-                                 data_dir=data_dir)
-
-        except Exception as e:
+        except IndexError as e:
             print(f"Optimisation failed: {e}")
 
         running.remove(ID)
@@ -168,13 +254,11 @@ def main_site():
 
         # if file was uploaded
         if 'file' in request.files and request.files['file'].filename:
-
             # get calculation data
             code = uuid.uuid4()
             pdb_str = request.files['file'].read().decode('utf-8')
 
         else:
-
             # get calculation data
             code = request.form.get('code', '').strip().upper()
             pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
@@ -192,11 +276,15 @@ def main_site():
             log_file.write(f'{request.remote_addr} {ID} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
 
         # validate PDB file
-        try:
-            _ = PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
-        except:
-            return jsonify({"status": "not applicable",
-                            "message": "Uploaded file is not valid PDB file."}), 406
+        if len(ID) > 30:
+            try:
+                structure = PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
+            except:
+                return jsonify({"status": "not applicable",
+                                "message": "The uploaded PDB file is not valid."}), 406
+            if all([atom.element != "H" for atom in structure.get_atoms()]):
+                return jsonify({"status": "not applicable",
+                                "message": "The uploaded PDB file is missing hydrogen atoms. Please add them and try again."}), 406
 
         # create and submit job (common for both paths)
         global optimisers
