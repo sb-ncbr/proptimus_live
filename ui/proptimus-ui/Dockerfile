@@ -1,8 +1,7 @@
 FROM node:24-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-RUN apk add --no-cache git ca-certificates
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
@@ -33,6 +32,9 @@ RUN echo "=== BUILD ENVIRONMENT VARIABLES ===" && \
     echo "NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL" && \
     echo "NEXT_PUBLIC_APP_NAME: $NEXT_PUBLIC_APP_NAME" && \
     echo "=== END BUILD ENV VARS ==="
+
+# Limit Node.js memory to trigger GC earlier instead of getting OOM-killed
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 
 RUN pnpm build
 
