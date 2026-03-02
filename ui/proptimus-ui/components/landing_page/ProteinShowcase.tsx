@@ -133,7 +133,7 @@ export default function ProteinShowcase(): React.JSX.Element {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-16">
+    <div className="w-full max-w-7xl mx-auto px-6 py-16">
       <div className="text-center mb-8">
         <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
           About the RAPHAN approach
