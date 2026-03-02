@@ -8,6 +8,8 @@ import {
   PluginUISpec,
 } from "molstar/lib/mol-plugin-ui/spec";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
+import { PluginConfig } from "molstar/lib/mol-plugin/config";
+import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { Color } from "molstar/lib/mol-util/color";
 import {
   BehaviorSubject,
@@ -50,6 +52,7 @@ export class MolstarModel {
     isDisposed: new BehaviorSubject<boolean>(false),
     isLoading: new BehaviorSubject<boolean>(false),
     isExpanded: new BehaviorSubject<boolean>(false),
+    showControls: new BehaviorSubject<boolean>(false),
 
     view: {
       scene: new BehaviorSubject<Scene["kind"]>("original"),
@@ -78,7 +81,7 @@ export class MolstarModel {
         initial: {
           ...defaultSpec.layout?.initial,
           isExpanded: this.state.isExpanded.value,
-          showControls: false,
+          showControls: this.state.showControls.value,
           controlsDisplay: "landscape",
         },
       },
@@ -89,6 +92,10 @@ export class MolstarModel {
           backgroundColor: Color(0xffffff),
         },
       },
+      config: [
+        [PluginConfig.Viewport.ShowAnimation, false],
+        [PluginConfig.Viewport.ShowTrajectoryControls, false],
+      ],
     };
     this.plugin = new PluginUIContext(spec);
   }
@@ -100,6 +107,7 @@ export class MolstarModel {
   private _sub(): void {
     this._subscribe(this.plugin!.layout.events.updated, () => {
       this.state.isExpanded.next(this.plugin.layout.state.isExpanded);
+      this.state.showControls.next(this.plugin.layout.state.showControls);
     });
 
     this._subscribe(
@@ -314,6 +322,15 @@ export class MolstarModel {
   }
 
   private _handleSceneChange(scene: Scene["kind"]): void {
+    const showControls = scene === "trajectory";
+    this.plugin.config.set(PluginConfig.Viewport.ShowAnimation, showControls);
+    this.plugin.config.set(
+      PluginConfig.Viewport.ShowTrajectoryControls,
+      showControls
+    );
+
+    PluginCommands.Layout.Update(this.plugin, { state: {} });
+
     const refs = this.state.structureRefs.value;
     const visibleScenes: Scene["kind"][] =
       scene === "optimised" ? ["optimised"] : [scene, "optimised"];
