@@ -1,6 +1,12 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiFetch } from '../lib/utils';
 
+export interface ResultsStatsResponse {
+    calculated: number;
+    queued: number;
+    running: number;
+}
+
 // 1. Submit a job (POST /)
 export function useSubmitJob() {
     return useMutation({
@@ -66,8 +72,8 @@ export function useResults(ID: string) {
 }
 
 export function useResultsStats() {
-    return useQuery({
-        queryKey: ['results'],
+    return useQuery<ResultsStatsResponse>({
+        queryKey: ['results-stats'],
         queryFn: async () => {
             const res = await apiFetch(`/results`);
             if (!res.ok) {
@@ -80,7 +86,7 @@ export function useResultsStats() {
                 }
                 throw new Error(errorMessage);
             }
-            return await res.text(); // may be HTML
+            return await res.json();
         },
     });
 }

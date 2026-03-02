@@ -19,8 +19,8 @@ from Bio.PDB import PDBParser, NeighborSearch
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
 
-from prime import PrimaryIntegrityMeasuresTaker
-from raphan import Raphan
+from app.prime import PrimaryIntegrityMeasuresTaker
+from app.raphan import Raphan
 
 application = Flask(__name__)
 
@@ -311,14 +311,22 @@ def results():
     except:
         return redirect(url_for('main_site'))
 
-    if not os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
+    data_dir = f'{root_dir}/calculated_structures/{ID}'
+    if not os.path.isdir(data_dir):
         return jsonify({"status": "not applicable",
                         "message": f"No results for ID {ID}."}), 406
 
-    return jsonify({"ID": ID,
-                    "code": code,
-                    "ph": ph})
+    pdb_files = {}
+    for file_type in ["optimised", "original", "trajectory", "prepared"]:
+        filepath = os.path.join(data_dir, f"{file_type}.pdb")
+        if os.path.isfile(filepath):
+            pdb_files[file_type] = url_for(
+                "get_pdb_file", ID=ID, file_type=file_type, _external=True
+            )
+        else:
+            pdb_files[file_type] = None
 
+    return jsonify({"id": ID, "code": code, "ph": ph, "pdb_files": pdb_files})
 
 
 @application.route('/api/running_progress', methods=['GET'])
@@ -418,6 +426,38 @@ def get_residues_logs(ID: str):
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
+@application.route('/differences/<ID>')
+def get_differences(ID: str):
+    filepath = f"{root_dir}/calculated_structures/{ID}/differences.json"
+    return Response(open(filepath, "r").read(), mimetype="text/json")
+
+
+@application.route('/warnings/<ID>')
+def get_tables(ID: str):
+    filepath = f"{root_dir}/calculated_structures/{ID}/tables.json"
+    return Response(open(filepath, "r").read(), mimetype="text/json")
+
+
 @application.errorhandler(404)
 def page_not_found(error):
     return jsonify({})
+
+
+@application.route('/pdb_file/<ID>/<file_type>')
+def get_pdb_file(ID: str, file_type: str):
+    file_mapping = {
+        "optimised": "optimised.pdb",
+        "original": "original.pdb",
+        "trajectory": "trajectory.pdb",
+        "prepared": "prepared.pdb",
+    }
+    if file_type not in file_mapping:
+        return jsonify(
+            {"status": "not applicable", "message": f"Unknown file type: {file_type}"}
+        ), 404
+    filepath = f"{root_dir}/calculated_structures/{ID}/{file_mapping[file_type]}"
+    if not os.path.isfile(filepath):
+        return jsonify(
+            {"status": "not applicable", "message": f"File not found: {file_type}"}
+        ), 404
+    return Response(open(filepath, "r").read(), mimetype="text/plain")
