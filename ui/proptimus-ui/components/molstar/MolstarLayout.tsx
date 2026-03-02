@@ -36,6 +36,7 @@ import { LogEntry } from "molstar/lib/mol-util/log-entry";
 import * as React from "react";
 import { JSX } from "react";
 import { BehaviorSubject } from "rxjs";
+import { ColorLegend } from "./ColorLegend";
 
 type RegionKind = "top" | "left" | "right" | "bottom" | "main";
 
@@ -64,6 +65,11 @@ export class Layout extends PluginUIComponent {
       layout.regionState.top === "hidden"
     ) {
       classList.push("msp-layout-hide-top");
+    }
+
+    // Hide sequence status bar when controls are hidden
+    if (!layout.showControls) {
+      classList.push("msp-hide-sequence-status");
     }
 
     if (
@@ -314,6 +320,7 @@ export class DefaultViewport extends PluginUIComponent {
           <LociLabels />
           <Toasts />
         </div>
+        <ColorLegend />
       </>
     );
   }

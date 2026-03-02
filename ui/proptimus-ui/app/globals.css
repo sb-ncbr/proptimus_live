@@ -224,3 +224,13 @@
 .shake-animation {
   animation: input-shake 0.4s ease-in-out;
 }
+
+/* Hide molstar sequence status bar when controls are hidden */
+.msp-hide-sequence-status .msp-sequence-select {
+  display: none !important;
+}
+
+/* Adjust sequence wrapper position when status bar is hidden */
+.msp-hide-sequence-status .msp-sequence-wrapper-non-empty {
+  top: 0 !important;
+}
