@@ -232,9 +232,13 @@ export class MolstarModel {
   async loadPdbFile(url: string, ref: Scene["kind"]): Promise<string | null> {
     this.state.isLoading.next(true);
     try {
+      // Extract a readable label from the URL for display in the sequence viewer
+      const label = this._extractLabelFromUrl(url, ref);
+
       const data = await this.plugin.builders.data.download({
         url: url,
         isBinary: false,
+        label: label,
       });
 
       const trajectory = await this.plugin.builders.structure.parseTrajectory(
@@ -509,5 +513,32 @@ export class MolstarModel {
     this.state.pinnedHighlight.next(false);
 
     this.plugin.managers.interactivity.lociHighlights.clearHighlights();
+  }
+
+  /**
+   * Extracts a readable label from a PDB URL for display in the sequence viewer.
+   * E.g., "http://localhost:5000/pdb_file/L8BU87_8.0/optimised" -> "L8BU87_8.0 (Optimised)"
+   */
+  private _extractLabelFromUrl(url: string, ref: Scene["kind"]): string {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+
+      // Try to extract meaningful parts from the URL path
+      // Expected format: /pdb_file/{id}/{type}
+      if (pathParts.length >= 3 && pathParts[0] === 'pdb_file') {
+        const id = pathParts[1];
+        const type = pathParts[2];
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+        return `${id} (${typeLabel})`;
+      }
+
+      // Fallback: use the last meaningful path segment
+      const lastSegment = pathParts[pathParts.length - 1] || 'Structure';
+      return `${lastSegment} (${ref})`;
+    } catch {
+      // If URL parsing fails, use the ref as a fallback
+      return ref.charAt(0).toUpperCase() + ref.slice(1);
+    }
   }
 }
