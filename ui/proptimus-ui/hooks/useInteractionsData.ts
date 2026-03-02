@@ -10,10 +10,14 @@ interface InteractionsData {
   "pipi optimised"?: number;
   "catpi original"?: number;
   "catpi optimised"?: number;
+  "number of atoms"?: number;
 }
 
 export function useInteractionsData(jobId: string) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:5000" ||
+    "http://proptimus.ceitec.cz/api";
 
   return useQuery<InteractionsData>({
     queryKey: ["interactions", jobId],

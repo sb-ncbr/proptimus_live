@@ -21,8 +21,8 @@ export default function Footer(): React.JSX.Element {
                 <Image
                   src="/assets/img/ncbr-logo.png"
                   alt="National Centre for Biomolecular Research"
-                  width={80}
-                  height={60}
+                  width={160}
+                  height={140}
                   className="object-contain"
                 />
               </a>

@@ -17,12 +17,9 @@ import Header from "@/components/layout/Header";
 import ProteinResultsCard from "@/components/optimization/ProteinResultsCard";
 import { InteractionsCard } from "@/components/optimization/InteractionsCard";
 import { Button } from "@/components/common/Button";
-import { HardDriveDownload, ArrowLeft } from "lucide-react";
+import { HardDriveDownload } from "lucide-react";
 import { useInteractionsData } from "@/hooks/useInteractionsData";
-import { useWarnings } from "@/hooks/useWarnings";
-import { WarningsDialogWrapper } from "@/components/optimization";
 import { toast } from "sonner";
-import { MolstarProvider } from "@/components/context/MolstarContext";
 
 function ResultsContent() {
   const searchParams = useSearchParams();
@@ -69,12 +66,6 @@ function ResultsContent() {
     data: interactionsData,
     isLoading: interactionsLoading,
   } = useInteractionsData(jobId || "");
-
-  // Fetch warnings data
-  const {
-    data: warningsData,
-    isLoading: warningsLoading,
-  } = useWarnings(jobId || "");
 
   // Only show results when both PDB structures are loaded
   React.useEffect(() => {
@@ -147,7 +138,7 @@ function ResultsContent() {
             </button>
             <button
               type="button"
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.href = '/live'}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
             >
               Go Home
@@ -230,7 +221,7 @@ function ResultsContent() {
             </button>
             <button
               type="button"
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.href = '/live'}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
             >
               Go Home
@@ -255,18 +246,16 @@ function ResultsContent() {
         }
       `}</style>
       <Header />
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 mt-8">
-            Optimisation Results
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Compare the original and optimized protein structures
-          </p>
-        </div>
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 mt-8">
+          Optimisation Results
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Compare the original and optimized protein structures
+        </p>
       </div>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <div className="mb-6 flex justify-between items-center">
 
@@ -279,10 +268,10 @@ function ResultsContent() {
                       Optimisation ID:
                     </td>
                     <td className="py-3">
-                        {optimisation_id}
+                      {optimisation_id}
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
                     <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
                       pH:
                     </td>
@@ -290,19 +279,21 @@ function ResultsContent() {
                       {phValue || "N/A"}
                     </td>
                   </tr>
+                  <tr>
+                    <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
+                      Number of Atoms:
+                    </td>
+                    <td className="py-3 text-gray-700 dark:text-gray-300">
+                      {interactionsData?.["number of atoms"] ?? "N/A"}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
             <InteractionsCard data={interactionsData} isLoading={interactionsLoading} />
           </div>
-          {/* Visualization Section */}
-          <div className="mb-6">
-            <ProteinComparison
-              jobId={jobId}
-            />
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="flex gap-3">
+          <div className="flex justify-between  items-center">
+            <div>
               <Button
                 variant="secondary"
                 size="lg"
@@ -314,22 +305,27 @@ function ResultsContent() {
                   <HardDriveDownload className="w-4 h-4" />
                   {downloadLoading ? "Downloading..." : "Download Optimized Structure"}
                 </div>
+
               </Button>
-              <WarningsDialogWrapper warnings={warningsData} isLoading={warningsLoading} />
             </div>
             <div>
               <Button
                 variant="secondary"
                 size="lg"
-                onClick={() => window.location.href = "/"}
+                onClick={() => window.location.href = "/live"}
                 className="text-primary-foreground"
               >
-                <div className="flex items-center gap-2 text-primary-foreground">
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Main Page
-                </div>
+                Back to Main Page
               </Button>
             </div>
+          </div>
+          {/* Visualization Section */}
+          <div className="mb-6">
+            <ProteinComparison
+              jobId={jobId}
+              originalPdbData={originalPdbData}
+              optimizedPdbData={optimizedPdbData}
+            />
           </div>
         </div>
       </div>
@@ -340,9 +336,7 @@ function ResultsContent() {
 export default function ResultsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-      <MolstarProvider>
-        <ResultsContent />
-      </MolstarProvider>
+      <ResultsContent />
     </Suspense>
   );
 }

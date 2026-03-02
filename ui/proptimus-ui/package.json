@@ -18,6 +18,7 @@
     "check-all": "bun run type-check && bun run lint && bun run format:check"
   },
   "dependencies": {
+    "@e-infra/design-system": "^0.0.7",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.8",
