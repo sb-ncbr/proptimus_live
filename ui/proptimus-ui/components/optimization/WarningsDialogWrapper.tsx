@@ -15,7 +15,7 @@ export function WarningsDialogWrapper({ warnings, isLoading }: WarningsDialogWra
 
   const handleFocusResidue = React.useCallback(
     (chainId: string, residueId: number, residueName: string) => {
-      viewer.focusResidue(chainId, residueId, residueName);
+      viewer?.focusResidue(chainId, residueId, residueName);
     },
     [viewer]
   );
@@ -29,7 +29,7 @@ export function WarningsDialogWrapper({ warnings, isLoading }: WarningsDialogWra
       residueId2: number,
       residueName2: string
     ) => {
-      viewer.focusResidues(
+      viewer?.focusResidues(
         chainId1,
         residueId1,
         residueName1,

@@ -7,6 +7,7 @@ import { PluginReactContext } from "molstar/lib/mol-plugin-ui/base";
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { MolstarModel } from "@/lib/molstar/molstar-model";
 
 interface MolstarViewerProps {
   jobId: string;
@@ -14,6 +15,21 @@ interface MolstarViewerProps {
 
 export function MolstarViewer({ jobId }: MolstarViewerProps) {
   const { viewer } = useMolstar();
+
+  if (!viewer) {
+    return <Skeleton className="relative h-175 w-full" />;
+  }
+
+  return <MolstarViewerInner viewer={viewer} jobId={jobId} />;
+}
+
+function MolstarViewerInner({
+  viewer,
+  jobId,
+}: {
+  viewer: MolstarModel;
+  jobId: string;
+}) {
   const isInitialized = useBehavior(viewer.state.isInitialized);
   const isLoading = useBehavior(viewer.state.isLoading);
   const isExpanded = useBehavior(viewer.state.isExpanded);

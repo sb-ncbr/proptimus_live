@@ -12,6 +12,7 @@ import { Scene, Coloring, SceneKind } from "@/lib/molstar/types";
 import { XCircle } from "lucide-react";
 import { Button } from "../common/Button";
 import { useMemo } from "react";
+import { MolstarModel } from "@/lib/molstar/molstar-model";
 
 const ALL_SCENES: { value: SceneKind; label: string }[] = [
   { value: "original", label: "Original & Optimised" },
@@ -27,6 +28,13 @@ const COLORS: { value: Coloring["kind"]; label: string }[] = [
 
 export function MolstarControls() {
   const { viewer } = useMolstar();
+
+  if (!viewer) return null;
+
+  return <MolstarControlsInner viewer={viewer} />;
+}
+
+function MolstarControlsInner({ viewer }: { viewer: MolstarModel }) {
   const currentScene = useBehavior(viewer.state.view.scene);
   const currentColor = useBehavior(viewer.state.view.color);
   const hasPinnedHighlight = useBehavior(viewer.state.pinnedHighlight);
