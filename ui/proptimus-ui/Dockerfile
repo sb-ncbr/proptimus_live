@@ -1,19 +1,16 @@
-FROM node:24-alpine AS deps
+FROM oven/bun:1-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
-    apk add --no-cache git ca-certificates
-
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml ./
-
-RUN pnpm install --frozen-lockfile
-
-FROM node:24-alpine AS builder
+RUN apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY package.json bun.lock ./
+
+RUN bun install --frozen-lockfile
+
+FROM oven/bun:1-alpine AS builder
+
+WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -36,7 +33,7 @@ RUN echo "=== BUILD ENVIRONMENT VARIABLES ===" && \
 # Limit Node.js memory to trigger GC earlier instead of getting OOM-killed
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 
-RUN pnpm build
+RUN bun run build
 
 FROM node:24-alpine AS runner
 

@@ -279,15 +279,23 @@ function ResultsContent() {
                       Optimisation ID:
                     </td>
                     <td className="py-3">
-                        {optimisation_id}
+                      {optimisation_id}
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
                     <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
                       pH:
                     </td>
                     <td className="py-3 text-gray-700 dark:text-gray-300">
                       {phValue || "N/A"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
+                      Number of Atoms:
+                    </td>
+                    <td className="py-3 text-gray-700 dark:text-gray-300">
+                      {interactionsData?.["number of atoms"] ?? "N/A"}
                     </td>
                   </tr>
                 </tbody>

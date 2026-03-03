@@ -34,7 +34,7 @@ const UniprotInputSection: React.FC = () => {
             // Backend now returns { ID, status }
             const jobId = submitJob.data.ID;
             setTimeout(() => {
-                router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
             }, 1500); // 1.5s delay for toast
         }
         if (submitJob.isError) {
@@ -89,7 +89,7 @@ const UniprotInputSection: React.FC = () => {
                     if (data.status === 'finished') {
                         toast.success("Optimization already complete! Redirecting...");
                         setTimeout(() => {
-                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                            router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
                         }, 1000);
                         setIsChecking(false);
                         return;
@@ -99,7 +99,7 @@ const UniprotInputSection: React.FC = () => {
                     if (data.status === 'running' || data.status === 'queued') {
                         toast.info("Optimization already in progress! Redirecting...");
                         setTimeout(() => {
-                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                            router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
                         }, 1000);
                         setIsChecking(false);
                         return;

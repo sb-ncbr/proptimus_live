@@ -90,7 +90,7 @@ export function MolstarControls() {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2 text-[#f2659f] hover:text-[#f2659f]/80"
+          className="gap-2 text-[#e45353] hover:text-[#e45353]/80"
           onClick={handleClearHighlight}
         >
           <XCircle className="h-4 w-4" />

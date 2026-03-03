@@ -13,7 +13,7 @@ interface ShowcaseCardProps {
 
 export default function ShowcaseCard({ showcase }: ShowcaseCardProps) {
   return (
-    <div className="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+    <div className="relative bg-white rounded-2xl m-2 shadow-lg border border-gray-200 overflow-hidden">
       {/* Image Placeholder */}
       <div className="w-full bg-gray-300 flex items-center justify-center p-2 bg-white">
         <img

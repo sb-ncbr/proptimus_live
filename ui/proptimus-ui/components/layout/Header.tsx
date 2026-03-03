@@ -11,7 +11,7 @@ export default function Header(): React.JSX.Element {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link
-            href="/"
+            href="/live"
             className="flex items-center group transition-all duration-300 hover:scale-105 hover:drop-shadow-md"
           >
             <span className="text-2xl font-bold text-zinc-900 group-hover:brightness-110 transition-all duration-300">
