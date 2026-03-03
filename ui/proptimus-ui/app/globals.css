@@ -234,3 +234,13 @@
 .msp-hide-sequence-status .msp-sequence-wrapper-non-empty {
   top: 0 !important;
 }
+
+/* Decrease sequence view height */
+.msp-layout-top {
+  height: 70px !important;
+}
+
+/* Adjust main viewport to account for smaller sequence view */
+.msp-layout-main {
+  top: 70px !important;
+}
