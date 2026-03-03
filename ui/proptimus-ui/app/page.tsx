@@ -131,7 +131,7 @@ function ToolCard({
         <div className="flex items-center justify-between">
           <Icon className="h-8 w-8 text-primary" />
           {!isAvailable && (
-            <Badge variant="primary"><p className="p-1">Coming Soon</p></Badge>
+            <Badge variant="secondary"><p className="p-1">Coming Soon</p></Badge>
           )}
         </div>
         <CardTitle className="text-lg">{name}</CardTitle>
