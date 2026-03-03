@@ -12,6 +12,7 @@ import {
 } from "@e-infra/design-system";
 import Footer from "@/components/layout/Footer";
 import { ArrowRight, Globe, Github } from "lucide-react";
+import CitingSection from "@/components/landing_page/CitingSection";
 
 const tools = [
   {
@@ -99,6 +100,10 @@ export default function LandingPage(): React.JSX.Element {
           </div>
         </div>
       </section>
+
+      <Separator className="max-w-5xl mx-auto" />
+
+      <CitingSection />
     </main>
   );
 }
