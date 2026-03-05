@@ -429,13 +429,21 @@ def get_residues_logs(ID: str):
 @application.route('/differences/<ID>')
 def get_differences(ID: str):
     filepath = f"{root_dir}/calculated_structures/{ID}/differences.json"
-    return Response(open(filepath, "r").read(), mimetype="text/json")
+    try:
+        return Response(open(filepath, "r").read(), mimetype="text/json")
+    except FileNotFoundError:
+        return jsonify({"status": "not applicable",
+                        "message": f"No differences data for ID {ID}."}), 406
 
 
 @application.route('/warnings/<ID>')
 def get_tables(ID: str):
     filepath = f"{root_dir}/calculated_structures/{ID}/tables.json"
-    return Response(open(filepath, "r").read(), mimetype="text/json")
+    try:
+        return Response(open(filepath, "r").read(), mimetype="text/json")
+    except FileNotFoundError:
+        return jsonify({"status": "not applicable",
+                        "message": f"No warnings data for ID {ID}."}), 406
 
 
 @application.errorhandler(404)
