@@ -13,6 +13,7 @@ import { XCircle } from "lucide-react";
 import { Button } from "../common/Button";
 import { useMemo } from "react";
 import { MolstarModel } from "@/lib/molstar/molstar-model";
+import { Skeleton } from "@e-infra/design-system";
 
 const ALL_SCENES: { value: SceneKind; label: string }[] = [
   { value: "original", label: "Original & Optimised" },
@@ -29,7 +30,7 @@ const COLORS: { value: Coloring["kind"]; label: string }[] = [
 export function MolstarControls() {
   const { viewer } = useMolstar();
 
-  if (!viewer) return null;
+  if (!viewer) return <Skeleton className="w-full h-10" />;
 
   return <MolstarControlsInner viewer={viewer} />;
 }
