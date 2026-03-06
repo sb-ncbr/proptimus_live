@@ -102,8 +102,8 @@ export default function LandingPage(): React.JSX.Element {
       </section>
 
       <Separator className="max-w-5xl mx-auto" />
-
-      <CitingSection />
+      {/* 
+      <CitingSection /> */}
     </main>
   );
 }
@@ -130,9 +130,9 @@ function ToolCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <Icon className="h-8 w-8 text-primary" />
-          {!isAvailable && (
+          {/* {!isAvailable && (
             <Badge variant="secondary"><p className="p-1">Coming Soon</p></Badge>
-          )}
+          )} */}
         </div>
         <CardTitle className="text-lg">{name}</CardTitle>
         <CardDescription>{description}</CardDescription>
