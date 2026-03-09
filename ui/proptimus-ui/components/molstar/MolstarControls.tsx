@@ -12,8 +12,6 @@ import { Scene, Coloring, SceneKind } from "@/lib/molstar/types";
 import { XCircle } from "lucide-react";
 import { Button } from "../common/Button";
 import { useMemo } from "react";
-import { MolstarModel } from "@/lib/molstar/molstar-model";
-import { Skeleton } from "@e-infra/design-system";
 
 const ALL_SCENES: { value: SceneKind; label: string }[] = [
   { value: "original", label: "Original & Optimised" },
@@ -29,17 +27,10 @@ const COLORS: { value: Coloring["kind"]; label: string }[] = [
 
 export function MolstarControls() {
   const { viewer } = useMolstar();
-
-  if (!viewer) return <Skeleton className="w-full h-10" />;
-
-  return <MolstarControlsInner viewer={viewer} />;
-}
-
-function MolstarControlsInner({ viewer }: { viewer: MolstarModel }) {
-  const currentScene = useBehavior(viewer.state.view.scene);
-  const currentColor = useBehavior(viewer.state.view.color);
-  const hasPinnedHighlight = useBehavior(viewer.state.pinnedHighlight);
-  const structureRefs = useBehavior(viewer.state.structureRefs);
+  const currentScene = useBehavior(viewer!.state.view.scene);
+  const currentColor = useBehavior(viewer!.state.view.color);
+  const hasPinnedHighlight = useBehavior(viewer!.state.pinnedHighlight);
+  const structureRefs = useBehavior(viewer!.state.structureRefs);
 
   const availableScenes = useMemo(() => {
     const hasOptimised = !!structureRefs.optimised;
@@ -52,15 +43,15 @@ function MolstarControlsInner({ viewer }: { viewer: MolstarModel }) {
   }, [structureRefs]);
 
   const handleSceneChange = (value: Scene["kind"]) => {
-    viewer.state.view.scene.next(value);
+    viewer!.state.view.scene.next(value);
   };
 
   const handleColorChange = (value: Coloring["kind"]) => {
-    viewer.state.view.color.next(value);
+    viewer!.state.view.color.next(value);
   };
 
   const handleClearHighlight = () => {
-    viewer.clearPinnedHighlight();
+    viewer!.clearPinnedHighlight();
   };
 
   return (
@@ -99,7 +90,7 @@ function MolstarControlsInner({ viewer }: { viewer: MolstarModel }) {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2 text-[#e45353] hover:text-[#e45353]/80"
+          className="gap-2 text-[#f2659f] hover:text-[#f2659f]/80"
           onClick={handleClearHighlight}
         >
           <XCircle className="h-4 w-4" />

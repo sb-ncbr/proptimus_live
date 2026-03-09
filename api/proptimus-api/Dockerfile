@@ -45,11 +45,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-WORKDIR /app/app
+WORKDIR /app
 
 # Create calculated_structures directory
-RUN mkdir -p calculated_structures && \
-    chmod 777 calculated_structures
+RUN mkdir -p app/calculated_structures && \
+    chmod 777 app/calculated_structures
 
 # Environment variables
 ENV FLASK_APP=routes.py
@@ -60,4 +60,4 @@ ENV OBABEL_PATH=/opt/miniconda3/bin/obabel
 EXPOSE 80
 
 # Run Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=80"]
+CMD ["flask", "--app", "app.routes:application", "run", "--host=0.0.0.0", "--port=80"]

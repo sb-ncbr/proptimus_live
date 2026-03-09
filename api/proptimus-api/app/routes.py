@@ -20,8 +20,8 @@ from flask import jsonify, request, send_from_directory, redirect, url_for, Resp
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from prime import PrimaryIntegrityMeasuresTaker
-from raphan import Raphan
+from app.prime import PrimaryIntegrityMeasuresTaker
+from app.raphan import Raphan
 
 application = Flask(__name__)
 application.wsgi_app = ProxyFix(application.wsgi_app, x_for=1, x_proto=1, x_host=1)
