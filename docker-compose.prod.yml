@@ -36,7 +36,7 @@ services:
       - FLASK_ENV=production
       - FLASK_APP=routes.py
       - FLASK_DEBUG=1
-      - CORS_ORIGINS=http://147.251.245.48,http://proptimus.ceitec.cz,https://proptimus.ceitec.cz,http://proptimus.biodata.ceitec.cz,https://proptimus.biodata.ceitec.cz,http://localhost:3000
+      - CORS_ORIGINS=http://147.251.245.48,https://147.251.245.48,http://proptimus.ceitec.cz,https://proptimus.ceitec.cz,http://proptimus.biodata.ceitec.cz,https://proptimus.biodata.ceitec.cz,http://localhost:3000
     depends_on:
       - traefik
     volumes:
