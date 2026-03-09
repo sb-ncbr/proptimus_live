@@ -1,4 +1,3 @@
-import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { StructureRepresentationPresetProvider } from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
 import { StructureRepresentationBuiltInProps } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
 import { StateTransforms } from "molstar/lib/mol-plugin-state/transforms";
@@ -75,7 +74,6 @@ export class MolstarModel {
       ...defaultSpec,
       behaviors: [
         ...defaultSpec.behaviors,
-        PluginSpec.Behavior(MolViewSpec),
         PluginSpec.Behavior(OptimizationDifference),
       ],
       layout: {
