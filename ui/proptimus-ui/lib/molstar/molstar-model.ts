@@ -8,7 +8,6 @@ import {
 } from "molstar/lib/mol-plugin-ui/spec";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
-import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { Color } from "molstar/lib/mol-util/color";
 import {
   BehaviorSubject,
@@ -262,15 +261,22 @@ export class MolstarModel {
         }
       );
 
-      const component =
-        await this.plugin.builders.structure.tryCreateComponentStatic(
-          structure,
-          "polymer"
+      let representationTarget: unknown = null;
+      try {
+        representationTarget =
+          await this.plugin.builders.structure.tryCreateComponentStatic(
+            structure,
+            "polymer"
+          );
+      } catch (e) {
+        console.warn(
+          `Failed to create polymer component for: ${url}. Falling back to full structure representation.`,
+          e
         );
+      }
 
-      if (!component) {
-        console.error(`Failed to create polymer component for: ${url}`);
-        return null;
+      if (!representationTarget) {
+        representationTarget = structure;
       }
 
       const props: StructureRepresentationBuiltInProps =
@@ -299,7 +305,7 @@ export class MolstarModel {
 
       const representation =
         await this.plugin.builders.structure.representation.addRepresentation(
-          component,
+          representationTarget as any,
           props,
           { tag: ref, initialState: { isHidden: true } }
         );
@@ -337,8 +343,6 @@ export class MolstarModel {
       PluginConfig.Viewport.ShowTrajectoryControls,
       showControls
     );
-
-    PluginCommands.Layout.Update(this.plugin, { state: {} });
 
     const refs = this.state.structureRefs.value;
     const visibleScenes: Scene["kind"][] =

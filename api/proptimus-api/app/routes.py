@@ -29,7 +29,7 @@ application.wsgi_app = ProxyFix(application.wsgi_app, x_for=1, x_proto=1, x_host
 # configure CORS to allow requests from your Next.js frontend
 # in production, replace '*' with your specific frontend URL
 cors_config = {
-    "origins": os.environ.get('CORS_ORIGINS', 'http://147.251.245.48,http://localhost:3000').split(','),
+    "origins": os.environ.get('CORS_ORIGINS', 'http://147.251.245.48,https://147.251.245.48,http://proptimus.ceitec.cz,https://proptimus.ceitec.cz,http://proptimus.biodata.ceitec.cz,https://proptimus.biodata.ceitec.cz,http://localhost:3000,https://147.251.245.48').split(','),
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization", "Accept"],
     "supports_credentials": False,
