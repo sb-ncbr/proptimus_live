@@ -14,13 +14,13 @@ variables:
 build-prod-api-image:
   stage: build-api
   script:
-    - /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/api/proptimus-api" \
-        --dockerfile Dockerfile \
-        --destination "${CI_REGISTRY_IMAGE}/api:latest \
-        --cache=true \
-        --cache-ttl=168h \
-        --snapshot-mode=redo \
+    - /kaniko/executor
+        --context "${CI_PROJECT_DIR}/api/proptimus-api"
+        --dockerfile "Dockerfile"
+        --destination "${CI_REGISTRY_IMAGE}/api:latest"
+        --cache=true
+        --cache-ttl=168h
+        --snapshot-mode=redo
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
@@ -28,13 +28,13 @@ build-prod-api-image:
 build-devel-api-image:
   stage: build-api
   script:
-    - /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/api/proptimus-api" \
-        --dockerfile Dockerfile \
-        --destination "${CI_REGISTRY_IMAGE}/api:${CI_COMMIT_REF_SLUG}" \
-        --cache=true \
-        --cache-ttl=168h \
-        --snapshot-mode=redo \
+    - /kaniko/executor
+        --context "${CI_PROJECT_DIR}/api/proptimus-api"
+        --dockerfile "Dockerfile"
+        --destination "${CI_REGISTRY_IMAGE}/api:${CI_COMMIT_REF_SLUG}"
+        --cache=true
+        --cache-ttl=168h
+        --snapshot-mode=redo
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
@@ -44,15 +44,15 @@ build-prod-ui-image:
   needs:
     - build-prod-api-image
   script:
-    - /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/ui/proptimus-ui" \
-        --dockerfile Dockerfile \
-        --build-arg NEXT_PUBLIC_APP_NAME="${UI_BUILD_ARG_APP_NAME}" \
-        --build-arg NEXT_PUBLIC_API_URL="${UI_BUILD_ARG_API_URL}" \
-        --destination "${CI_REGISTRY_IMAGE}/ui:latest \
-        --cache=true \
-        --cache-ttl=168h \
-        --snapshot-mode=redo \
+    - /kaniko/executor
+        --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
+        --dockerfile "Dockerfile"
+        --build-arg NEXT_PUBLIC_APP_NAME="${UI_BUILD_ARG_APP_NAME}"
+        --build-arg NEXT_PUBLIC_API_URL="${UI_BUILD_ARG_API_URL}"
+        --destination "${CI_REGISTRY_IMAGE}/ui:latest"
+        --cache=true
+        --cache-ttl=168h
+        --snapshot-mode=redo
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
@@ -62,15 +62,15 @@ build-devel-ui-image:
   needs:
     - build-devel-api-image
   script:
-    - /kaniko/executor \
-        --context "${CI_PROJECT_DIR}/ui/proptimus-ui" \
-        --dockerfile Dockerfile \
-        --build-arg NEXT_PUBLIC_APP_NAME="${UI_BUILD_ARG_APP_NAME}" \
-        --build-arg NEXT_PUBLIC_API_URL="${UI_BUILD_DEVEL_ARG_API_URL}" \
-        --destination "${CI_REGISTRY_IMAGE}/ui:${CI_COMMIT_REF_SLUG}" \
-        --cache=true \
-        --cache-ttl=168h \
-        --snapshot-mode=redo \
+    - /kaniko/executor
+        --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
+        --dockerfile "Dockerfile"
+        --build-arg NEXT_PUBLIC_APP_NAME="${UI_BUILD_ARG_APP_NAME}"
+        --build-arg NEXT_PUBLIC_API_URL="${UI_BUILD_DEVEL_ARG_API_URL}"
+        --destination "${CI_REGISTRY_IMAGE}/ui:${CI_COMMIT_REF_SLUG}"
+        --cache=true
+        --cache-ttl=168h
+        --snapshot-mode=redo
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
