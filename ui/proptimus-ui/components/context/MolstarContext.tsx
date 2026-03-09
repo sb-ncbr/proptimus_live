@@ -18,23 +18,30 @@ export const MolstarProvider: React.FC<MolstarProviderProps> = ({
   children,
 }) => {
   const viewerRef = useRef<MolstarModel | null>(null);
+  const [viewer, setViewer] = useState<MolstarModel | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    import("@/lib/molstar/molstar-model").then(({ MolstarModel }) => {
-      if (cancelled) return;
+    import("@/lib/molstar/molstar-model")
+      .then(async ({ MolstarModel }) => {
+        if (cancelled) return;
 
-      // Create a fresh instance on mount
-      const viewer = new MolstarModel();
-      viewerRef.current = viewer;
+        const nextViewer = new MolstarModel();
+        viewerRef.current = nextViewer;
+        setViewer(nextViewer);
 
-      // Mount it
-      viewer.mount().then(() => {
+        await nextViewer.mount();
         if (!cancelled) setIsReady(true);
+      })
+      .catch((error) => {
+        console.error("Failed to initialize Molstar viewer", error);
+        if (!cancelled) {
+          setViewer(null);
+          setIsReady(false);
+        }
       });
-    });
 
     // Cleanup on unmount
     return () => {
@@ -43,12 +50,13 @@ export const MolstarProvider: React.FC<MolstarProviderProps> = ({
         viewerRef.current.unmount();
       }
       viewerRef.current = null;
+      setViewer(null);
       setIsReady(false);
     };
   }, []); // Empty deps - runs once per mount
 
   const value = {
-    viewer: viewerRef.current,
+    viewer,
     isReady,
   };
 

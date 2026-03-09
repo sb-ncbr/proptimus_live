@@ -19,8 +19,8 @@ from Bio.PDB import PDBParser, NeighborSearch
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
 
-from prime import PrimaryIntegrityMeasuresTaker
-from raphan import Raphan
+from app.prime import PrimaryIntegrityMeasuresTaker
+from app.raphan import Raphan
 
 application = Flask(__name__)
 

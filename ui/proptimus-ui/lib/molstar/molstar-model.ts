@@ -38,6 +38,7 @@ import {
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
 import { compile } from "molstar/lib/mol-script/runtime/query/base";
 import { Loci } from "molstar/lib/mol-model/loci";
+import { API_URL } from "@/lib/utils";
 
 export class MolstarModel {
   readonly plugin: PluginUIContext;
@@ -172,9 +173,9 @@ export class MolstarModel {
   }
 
   private async _handleJobChange(jobId: string): Promise<void> {
-    const resultUrl = `http://localhost:5000/results?ID=${jobId}`;
-    const differencesUrl = `http://localhost:5000/differences/${jobId}`;
-    const warningsUrl = `http://localhost:5000/warnings/${jobId}`;
+    const resultUrl = `${API_URL}/results?ID=${jobId}`;
+    const differencesUrl = `${API_URL}/differences/${jobId}`;
+    const warningsUrl = `${API_URL}/warnings/${jobId}`;
 
     const result = await this._fetchData<any>(resultUrl);
     const differences = await this._fetchData<any[]>(differencesUrl);
@@ -522,11 +523,11 @@ export class MolstarModel {
   private _extractLabelFromUrl(url: string, ref: Scene["kind"]): string {
     try {
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const pathParts = urlObj.pathname.split("/").filter(Boolean);
 
       // Try to extract meaningful parts from the URL path
       // Expected format: /pdb_file/{id}/{type}
-      if (pathParts.length >= 3 && pathParts[0] === 'pdb_file') {
+      if (pathParts.length >= 3 && pathParts[0] === "pdb_file") {
         const id = pathParts[1];
         const type = pathParts[2];
         const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
@@ -534,7 +535,7 @@ export class MolstarModel {
       }
 
       // Fallback: use the last meaningful path segment
-      const lastSegment = pathParts[pathParts.length - 1] || 'Structure';
+      const lastSegment = pathParts[pathParts.length - 1] || "Structure";
       return `${lastSegment} (${ref})`;
     } catch {
       // If URL parsing fails, use the ref as a fallback
