@@ -8,6 +8,7 @@ import {
 } from "molstar/lib/mol-plugin-ui/spec";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
+import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { Color } from "molstar/lib/mol-util/color";
 import {
   BehaviorSubject,
@@ -75,6 +76,11 @@ export class MolstarModel {
         ...defaultSpec.behaviors,
         PluginSpec.Behavior(OptimizationDifference),
       ],
+      components: {
+        sequenceViewer: {
+          defaultMode: "all",
+        },
+      },
       layout: {
         initial: {
           ...defaultSpec.layout?.initial,
@@ -139,6 +145,15 @@ export class MolstarModel {
     this._subscribe(this.plugin.behaviors.interaction.hover, () => {
       this._maintainHighlight();
     });
+
+    this._subscribe(
+      this.plugin.managers.interactivity.events.propsUpdated,
+      () => {
+        const granularity =
+          this.plugin.managers.interactivity.props.granularity;
+        optimizationDifferenceLabelProvider.setGranularity(granularity);
+      }
+    );
   }
 
   private _unsub(): void {
@@ -150,8 +165,13 @@ export class MolstarModel {
     if (this.state.isInitialized.value) return;
     await this.plugin.init();
     this._sub();
-    this.plugin.managers.interactivity.setProps({ granularity: "element" });
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
+
+    optimizationDifferenceLabelProvider.setColoring(
+      this.state.view.color.value
+    );
+    optimizationDifferenceLabelProvider.setGranularity("not-atom");
+
     this.state.isInitialized.next(true);
   }
 
@@ -171,13 +191,13 @@ export class MolstarModel {
 
   private async _handleJobChange(jobId: string): Promise<void> {
     const resultUrl =
-      this._normalizeRequestUrl(`${API_URL}/results?ID=${jobId}`) ??
+      normalizeRequestUrl(`${API_URL}/results?ID=${jobId}`) ??
       `${API_URL}/results?ID=${jobId}`;
     const differencesUrl =
-      this._normalizeRequestUrl(`${API_URL}/differences/${jobId}`) ??
+      normalizeRequestUrl(`${API_URL}/differences/${jobId}`) ??
       `${API_URL}/differences/${jobId}`;
     const warningsUrl =
-      this._normalizeRequestUrl(`${API_URL}/warnings/${jobId}`) ??
+      normalizeRequestUrl(`${API_URL}/warnings/${jobId}`) ??
       `${API_URL}/warnings/${jobId}`;
 
     const result = await this._fetchData<any>(resultUrl);
@@ -190,7 +210,7 @@ export class MolstarModel {
       const pdbFiles = result.pdb_files as StructureUrls;
       for (const id of Object.keys(pdbFiles)) {
         const sceneKind = id as Scene["kind"];
-        const pdbUrl = this._normalizeRequestUrl(pdbFiles[sceneKind]);
+        const pdbUrl = normalizeRequestUrl(pdbFiles[sceneKind]);
         if (!pdbUrl) continue;
         const ref = await this.loadPdbFile(pdbUrl, sceneKind);
         if (ref) {
@@ -258,22 +278,15 @@ export class MolstarModel {
         }
       );
 
-      let representationTarget: unknown = null;
-      try {
-        representationTarget =
-          await this.plugin.builders.structure.tryCreateComponentStatic(
-            structure,
-            "polymer"
-          );
-      } catch (e) {
-        console.warn(
-          `Failed to create polymer component for: ${url}. Falling back to full structure representation.`,
-          e
+      const component =
+        await this.plugin.builders.structure.tryCreateComponentStatic(
+          structure,
+          "all"
         );
-      }
 
-      if (!representationTarget) {
-        representationTarget = structure;
+      if (!component) {
+        console.error(`Failed to create polymer component for: ${url}`);
+        return null;
       }
 
       const props: StructureRepresentationBuiltInProps =
@@ -302,7 +315,7 @@ export class MolstarModel {
 
       const representation =
         await this.plugin.builders.structure.representation.addRepresentation(
-          representationTarget as any,
+          component,
           props,
           { tag: ref, initialState: { isHidden: true } }
         );
@@ -340,6 +353,8 @@ export class MolstarModel {
       PluginConfig.Viewport.ShowTrajectoryControls,
       showControls
     );
+
+    PluginCommands.Layout.Update(this.plugin, { state: {} });
 
     const refs = this.state.structureRefs.value;
     const visibleScenes: Scene["kind"][] =
@@ -383,6 +398,8 @@ export class MolstarModel {
     await update.commit();
 
     await this.updateFocusColorTheme(color);
+
+    optimizationDifferenceLabelProvider.setColoring(color);
   }
 
   focusResidue(chainId: string, residueId: number, residueName?: string): void {
@@ -473,8 +490,6 @@ export class MolstarModel {
   }
 
   private _highlightWithTimeout(loci: Loci, timeoutMs: number = 2000): void {
-    if (!loci) return;
-
     if (this._highlightTimeout) {
       clearTimeout(this._highlightTimeout);
     }
@@ -486,15 +501,7 @@ export class MolstarModel {
 
     this.state.pinnedHighlight.next(true);
 
-    try {
-      this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
-    } catch (e) {
-      console.warn("Failed to apply highlight:", e);
-      this._highlightedLoci = null;
-      this._pinnedHighlightLoci = null;
-      this.state.pinnedHighlight.next(false);
-      return;
-    }
+    this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
 
     this._highlightTimeout = setTimeout(() => {
       this._pinnedHighlightLoci = this._highlightedLoci;
@@ -505,26 +512,16 @@ export class MolstarModel {
 
   private _maintainHighlight(): void {
     if (this._pinnedHighlightLoci) {
-      try {
-        this.plugin.managers.interactivity.lociHighlights.highlightOnly({
-          loci: this._pinnedHighlightLoci,
-        });
-      } catch (e) {
-        console.warn("Failed to maintain pinned highlight:", e);
-        this.clearPinnedHighlight();
-      }
+      this.plugin.managers.interactivity.lociHighlights.highlightOnly({
+        loci: this._pinnedHighlightLoci,
+      });
       return;
     }
 
     if (this._highlightedLoci && Date.now() < this._highlightExpiry) {
-      try {
-        this.plugin.managers.interactivity.lociHighlights.highlightOnly({
-          loci: this._highlightedLoci,
-        });
-      } catch (e) {
-        console.warn("Failed to maintain temporary highlight:", e);
-        this.clearPinnedHighlight();
-      }
+      this.plugin.managers.interactivity.lociHighlights.highlightOnly({
+        loci: this._highlightedLoci,
+      });
     }
   }
 
@@ -538,56 +535,25 @@ export class MolstarModel {
     this._pinnedHighlightLoci = null;
     this.state.pinnedHighlight.next(false);
 
-    try {
-      this.plugin.managers.interactivity.lociHighlights.clearHighlights();
-    } catch (e) {
-      console.warn("Failed to clear highlights:", e);
-    }
+    this.plugin.managers.interactivity.lociHighlights.clearHighlights();
   }
+}
 
-  private _normalizeRequestUrl(url: string | null | undefined): string | null {
-    if (!url) return null;
+function normalizeRequestUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
 
-    try {
-      if (typeof window === "undefined") return url;
+  try {
+    if (typeof window === "undefined") return url;
 
-      const parsedUrl = new URL(url, window.location.origin);
-      const pageProtocol = window.location.protocol;
+    const parsedUrl = new URL(url, window.location.origin);
+    const pageProtocol = window.location.protocol;
 
-      if (pageProtocol === "https:" && parsedUrl.protocol === "http:") {
-        parsedUrl.protocol = "https:";
-      }
-
-      return parsedUrl.toString();
-    } catch {
-      return url;
+    if (pageProtocol === "https:" && parsedUrl.protocol === "http:") {
+      parsedUrl.protocol = "https:";
     }
-  }
 
-  /**
-   * Extracts a readable label from a PDB URL for display in the sequence viewer.
-   * E.g., "http://localhost:5000/pdb_file/L8BU87_8.0/optimised" -> "L8BU87_8.0 (Optimised)"
-   */
-  private _extractLabelFromUrl(url: string, ref: Scene["kind"]): string {
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(Boolean);
-
-      // Try to extract meaningful parts from the URL path
-      // Expected format: /pdb_file/{id}/{type}
-      if (pathParts.length >= 3 && pathParts[0] === 'pdb_file') {
-        const id = pathParts[1];
-        const type = pathParts[2];
-        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-        return `${id} (${typeLabel})`;
-      }
-
-      // Fallback: use the last meaningful path segment
-      const lastSegment = pathParts[pathParts.length - 1] || 'Structure';
-      return `${lastSegment} (${ref})`;
-    } catch {
-      // If URL parsing fails, use the ref as a fallback
-      return ref.charAt(0).toUpperCase() + ref.slice(1);
-    }
+    return parsedUrl.toString();
+  } catch {
+    return url;
   }
 }

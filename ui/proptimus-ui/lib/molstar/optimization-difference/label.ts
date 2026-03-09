@@ -7,6 +7,7 @@
 import { StructureElement, StructureProperties, Unit } from 'molstar/lib/mol-model/structure';
 import { Loci } from 'molstar/lib/mol-model/loci';
 import { LociLabelProvider } from 'molstar/lib/mol-plugin-state/manager/loci-label';
+import { Coloring } from '../types';
 
 export interface OptimizationDataEntry {
     chain_id: string;
@@ -26,14 +27,30 @@ function createDataMap(data: OptimizationDataEntry[]): Map<string, number> {
 
 export class OptimizationDifferenceLabelProvider {
     private dataMap: Map<string, number> = new Map();
+    private _granularity: string = 'element';
+    private _coloring: Coloring["kind"] = 'element-symbol';
 
     setData(data: OptimizationDataEntry[]) {
         this.dataMap = createDataMap(data);
     }
 
+    setGranularity(granularity: string) {
+        this._granularity = granularity;
+    }
+
+    setColoring(coloring: Coloring["kind"]) {
+        this._coloring = coloring;
+    }
+
+    private _shouldShowLabel(): boolean {
+        return this._granularity === 'element' && this._coloring === 'optimization-difference';
+    }
+
     getProvider(): LociLabelProvider {
         return {
             label: (loci: Loci) => {
+                if (!this._shouldShowLabel()) return;
+
                 if (!StructureElement.Loci.is(loci)) return;
 
                 const loc = StructureElement.Loci.getFirstLocation(loci);
