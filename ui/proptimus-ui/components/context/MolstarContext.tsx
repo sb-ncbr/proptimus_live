@@ -1,7 +1,7 @@
 "use client";
 
+import { MolstarModel } from "@/lib/molstar/molstar-model";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { MolstarModel } from "@/lib/molstar/molstar-model";
 
 interface MolstarContextType {
   viewer: MolstarModel | null;
@@ -18,45 +18,30 @@ export const MolstarProvider: React.FC<MolstarProviderProps> = ({
   children,
 }) => {
   const viewerRef = useRef<MolstarModel | null>(null);
-  const [viewer, setViewer] = useState<MolstarModel | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    // Create a fresh instance on mount
+    const viewer = new MolstarModel();
+    viewerRef.current = viewer;
 
-    import("@/lib/molstar/molstar-model")
-      .then(async ({ MolstarModel }) => {
-        if (cancelled) return;
-
-        const nextViewer = new MolstarModel();
-        viewerRef.current = nextViewer;
-        setViewer(nextViewer);
-
-        await nextViewer.mount();
-        if (!cancelled) setIsReady(true);
-      })
-      .catch((error) => {
-        console.error("Failed to initialize Molstar viewer", error);
-        if (!cancelled) {
-          setViewer(null);
-          setIsReady(false);
-        }
-      });
+    // Mount it
+    viewer.mount().then(() => {
+      setIsReady(true);
+    });
 
     // Cleanup on unmount
     return () => {
-      cancelled = true;
       if (viewerRef.current && !viewerRef.current.state.isDisposed.value) {
         viewerRef.current.unmount();
       }
       viewerRef.current = null;
-      setViewer(null);
       setIsReady(false);
     };
   }, []); // Empty deps - runs once per mount
 
   const value = {
-    viewer,
+    viewer: viewerRef.current,
     isReady,
   };
 

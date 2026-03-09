@@ -236,13 +236,10 @@ export class MolstarModel {
   async loadPdbFile(url: string, ref: Scene["kind"]): Promise<string | null> {
     this.state.isLoading.next(true);
     try {
-      // Extract a readable label from the URL for display in the sequence viewer
-      const label = this._extractLabelFromUrl(url, ref);
-
       const data = await this.plugin.builders.data.download({
         url: url,
         isBinary: false,
-        label: label,
+        label: ref,
       });
 
       const trajectory = await this.plugin.builders.structure.parseTrajectory(
@@ -574,11 +571,11 @@ export class MolstarModel {
   private _extractLabelFromUrl(url: string, ref: Scene["kind"]): string {
     try {
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split("/").filter(Boolean);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
 
       // Try to extract meaningful parts from the URL path
       // Expected format: /pdb_file/{id}/{type}
-      if (pathParts.length >= 3 && pathParts[0] === "pdb_file") {
+      if (pathParts.length >= 3 && pathParts[0] === 'pdb_file') {
         const id = pathParts[1];
         const type = pathParts[2];
         const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
@@ -586,7 +583,7 @@ export class MolstarModel {
       }
 
       // Fallback: use the last meaningful path segment
-      const lastSegment = pathParts[pathParts.length - 1] || "Structure";
+      const lastSegment = pathParts[pathParts.length - 1] || 'Structure';
       return `${lastSegment} (${ref})`;
     } catch {
       // If URL parsing fails, use the ref as a fallback
