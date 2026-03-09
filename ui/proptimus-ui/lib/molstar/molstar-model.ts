@@ -171,9 +171,15 @@ export class MolstarModel {
   }
 
   private async _handleJobChange(jobId: string): Promise<void> {
-    const resultUrl = `${API_URL}/results?ID=${jobId}`;
-    const differencesUrl = `${API_URL}/differences/${jobId}`;
-    const warningsUrl = `${API_URL}/warnings/${jobId}`;
+    const resultUrl =
+      this._normalizeRequestUrl(`${API_URL}/results?ID=${jobId}`) ??
+      `${API_URL}/results?ID=${jobId}`;
+    const differencesUrl =
+      this._normalizeRequestUrl(`${API_URL}/differences/${jobId}`) ??
+      `${API_URL}/differences/${jobId}`;
+    const warningsUrl =
+      this._normalizeRequestUrl(`${API_URL}/warnings/${jobId}`) ??
+      `${API_URL}/warnings/${jobId}`;
 
     const result = await this._fetchData<any>(resultUrl);
     const differences = await this._fetchData<any[]>(differencesUrl);
@@ -185,7 +191,7 @@ export class MolstarModel {
       const pdbFiles = result.pdb_files as StructureUrls;
       for (const id of Object.keys(pdbFiles)) {
         const sceneKind = id as Scene["kind"];
-        const pdbUrl = pdbFiles[sceneKind];
+        const pdbUrl = this._normalizeRequestUrl(pdbFiles[sceneKind]);
         if (!pdbUrl) continue;
         const ref = await this.loadPdbFile(pdbUrl, sceneKind);
         if (ref) {
@@ -466,6 +472,8 @@ export class MolstarModel {
   }
 
   private _highlightWithTimeout(loci: Loci, timeoutMs: number = 2000): void {
+    if (!loci) return;
+
     if (this._highlightTimeout) {
       clearTimeout(this._highlightTimeout);
     }
@@ -477,7 +485,15 @@ export class MolstarModel {
 
     this.state.pinnedHighlight.next(true);
 
-    this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
+    try {
+      this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
+    } catch (e) {
+      console.warn("Failed to apply highlight:", e);
+      this._highlightedLoci = null;
+      this._pinnedHighlightLoci = null;
+      this.state.pinnedHighlight.next(false);
+      return;
+    }
 
     this._highlightTimeout = setTimeout(() => {
       this._pinnedHighlightLoci = this._highlightedLoci;
@@ -488,16 +504,26 @@ export class MolstarModel {
 
   private _maintainHighlight(): void {
     if (this._pinnedHighlightLoci) {
-      this.plugin.managers.interactivity.lociHighlights.highlightOnly({
-        loci: this._pinnedHighlightLoci,
-      });
+      try {
+        this.plugin.managers.interactivity.lociHighlights.highlightOnly({
+          loci: this._pinnedHighlightLoci,
+        });
+      } catch (e) {
+        console.warn("Failed to maintain pinned highlight:", e);
+        this.clearPinnedHighlight();
+      }
       return;
     }
 
     if (this._highlightedLoci && Date.now() < this._highlightExpiry) {
-      this.plugin.managers.interactivity.lociHighlights.highlightOnly({
-        loci: this._highlightedLoci,
-      });
+      try {
+        this.plugin.managers.interactivity.lociHighlights.highlightOnly({
+          loci: this._highlightedLoci,
+        });
+      } catch (e) {
+        console.warn("Failed to maintain temporary highlight:", e);
+        this.clearPinnedHighlight();
+      }
     }
   }
 
@@ -511,7 +537,30 @@ export class MolstarModel {
     this._pinnedHighlightLoci = null;
     this.state.pinnedHighlight.next(false);
 
-    this.plugin.managers.interactivity.lociHighlights.clearHighlights();
+    try {
+      this.plugin.managers.interactivity.lociHighlights.clearHighlights();
+    } catch (e) {
+      console.warn("Failed to clear highlights:", e);
+    }
+  }
+
+  private _normalizeRequestUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+
+    try {
+      if (typeof window === "undefined") return url;
+
+      const parsedUrl = new URL(url, window.location.origin);
+      const pageProtocol = window.location.protocol;
+
+      if (pageProtocol === "https:" && parsedUrl.protocol === "http:") {
+        parsedUrl.protocol = "https:";
+      }
+
+      return parsedUrl.toString();
+    } catch {
+      return url;
+    }
   }
 
   /**

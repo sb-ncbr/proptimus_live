@@ -18,11 +18,13 @@ import requests
 from Bio.PDB import PDBParser, NeighborSearch
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from prime import PrimaryIntegrityMeasuresTaker
 from raphan import Raphan
 
 application = Flask(__name__)
+application.wsgi_app = ProxyFix(application.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # configure CORS to allow requests from your Next.js frontend
 # in production, replace '*' with your specific frontend URL
@@ -52,6 +54,13 @@ def residue_id(biotite_structure, atom_index):
     return (str(biotite_structure.chain_id[atom_index]),
             int(biotite_structure.res_id[atom_index]),
             str(biotite_structure.res_name[atom_index]))
+
+
+def _external_scheme() -> str:
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    if forwarded_proto:
+        return forwarded_proto.split(",")[0].strip()
+    return request.scheme
 
 
 def write_additional_info(original_PDB_file,
@@ -317,11 +326,12 @@ def results():
                         "message": f"No results for ID {ID}."}), 406
 
     pdb_files = {}
+    scheme = _external_scheme()
     for file_type in ["optimised", "original", "trajectory", "prepared"]:
         filepath = os.path.join(data_dir, f"{file_type}.pdb")
         if os.path.isfile(filepath):
             pdb_files[file_type] = url_for(
-                "get_pdb_file", ID=ID, file_type=file_type, _external=True
+                "get_pdb_file", ID=ID, file_type=file_type, _external=True, _scheme=scheme
             )
         else:
             pdb_files[file_type] = None
