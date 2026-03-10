@@ -9,13 +9,13 @@ from multiprocessing import Process, Manager
 from pathlib import Path
 from random import random
 from time import time
+import traceback
 
-import biotite
+import hydride
 import biotite.structure as struc
 import biotite.structure.io as strucio
-import gemmi
 import requests
-from Bio.PDB import PDBParser, NeighborSearch
+from Bio.PDB import PDBParser, NeighborSearch, Polypeptide
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -207,7 +207,7 @@ def write_additional_info(original_PDB_file,
 def optimise_structures():
     while len(queue):
         try:
-            ID = queue.pop(0)
+            ID = queue.pop(0).upper()
             running.append(ID)
             code, ph = ID.split('_')
             data_dir = f'{root_dir}/calculated_structures/{ID}'
@@ -223,28 +223,45 @@ def optimise_structures():
                         break
                     original_pdb_header += line
 
-            # estimate calculation time
             structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
+            if all(atom.element != "H" for atom in structure.get_atoms()):
+
+                # if structure is downloaded from AlphaFold DB, correct it first
+                if 4 < len(code) < 30:
+                    try:
+                        PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                                      json_logs_dir=Path(f"{data_dir}")).process_structure()
+                        if Path(f"{data_dir}/correction_sicc_af").exists():
+                            pdb_file = glob(f"{data_dir}/correction_sicc_af/original_corrected.pdb")[0]
+                    except KeyError:
+                        pass
+
+                # if structure contain only standard aminoacids, pdb2pqr can be used
+                if all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
+                    os.system(f'pdb2pqr30 --titration-state-method propka '
+                              f'--with-ph {ph} --pdb-output {prepared_pdb_file} {pdb_file} '
+                              f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
+
+                # if structure contain heteroresidues, less accurate but more universal hydride is used
+                else:
+                    molecule = strucio.load_structure(file_path=pdb_file,
+                                                      model=1,
+                                                      extra_fields=["charge"],
+                                                      include_bonds=True)
+                    charges = hydride.estimate_amino_acid_charges(molecule, ph=float(ph))
+                    molecule.set_annotation("charge", charges)
+                    molecule_with_hydrogens, _ = hydride.add_hydrogen(molecule)
+                    molecule_with_hydrogens.coord = hydride.relax_hydrogen(molecule_with_hydrogens)
+                    strucio.save_structure(file_path=prepared_pdb_file,
+                                           array=molecule_with_hydrogens)
+                pdb_file = prepared_pdb_file
+
+            # estimate calculation time
             atoms = list(structure.get_atoms())
             num_of_atoms = len(atoms) * 2
             estimated_time = num_of_atoms / 10 + 60
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
-
-            # if structure is downloaded from AlphaFold DB, correct it and add hydrogens
-            if len(ID) < 30:
-                try:
-                    PrimaryIntegrityMeasuresTaker(Path(pdb_file),
-                                                  json_logs_dir=Path(f"{data_dir}")).process_structure()
-                    if Path(f"{data_dir}/correction_sicc_af").exists():
-                        pdb_file = glob(f"{data_dir}/correction_sicc_af/original_corrected.pdb")[0]
-                except KeyError:
-                    pass
-
-                os.system(f'pdb2pqr30 --titration-state-method propka '
-                          f'--with-ph {ph} --pdb-output {prepared_pdb_file} {pdb_file} '
-                          f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
-                pdb_file = prepared_pdb_file
 
             # optimise structure
             raphan = Raphan(data_dir=data_dir,
@@ -268,7 +285,7 @@ def optimise_structures():
         except Exception as e:
             print(f"Optimisation failed: {e}")
             with open(f"{data_dir}/failed.txt", 'w') as f:
-                f.write(str(e))
+                f.write(traceback.format_exc())
         finally:
             running.remove(ID)
 
@@ -334,10 +351,10 @@ def results():
     except:
         return redirect(url_for('main_site'))
 
-    data_dir = f'{root_dir}/calculated_structures/{ID}'
+    data_dir = f'{root_dir}/calculated_structures/{ID.upper()}'
     if not os.path.isdir(data_dir):
         return jsonify({"status": "not applicable",
-                        "message": f"No results for ID {ID}."}), 406
+                        "message": f"No results for ID {ID.upper()}."}), 406
 
     pdb_files = {}
     scheme = _external_scheme()
@@ -345,18 +362,18 @@ def results():
         filepath = os.path.join(data_dir, f"{file_type}.pdb")
         if os.path.isfile(filepath):
             pdb_files[file_type] = url_for(
-                "get_pdb_file", ID=ID, file_type=file_type, _external=True, _scheme=scheme
+                "get_pdb_file", ID=ID.upper(), file_type=file_type, _external=True, _scheme=scheme
             )
         else:
             pdb_files[file_type] = None
 
-    return jsonify({"id": ID, "code": code, "ph": ph, "pdb_files": pdb_files})
+    return jsonify({"id": ID.upper(), "code": code, "ph": ph, "pdb_files": pdb_files})
 
 
 @application.route('/api/running_progress', methods=['GET'])
 def running_progress():
 
-    ID = request.args.get('ID')
+    ID = request.args.get('ID').upper()
     remaining_time = ""
     message = ""
     url = ""
@@ -367,7 +384,7 @@ def running_progress():
         remaining_time = f"∞ (Optimization failed. Please contact us and provide the ID={ID} so we can fix this issue."
 
     # check status
-    elif os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb'):
+    elif os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb') and os.path.isfile(f'{root_dir}/calculated_structures/{ID}/tables.json'):
         status = "finished"
         url = url_for('results', ID=ID)
     elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
@@ -417,18 +434,18 @@ def running_progress():
 @application.route('/api/interactions/<ID>', methods=['GET'])
 def get_interactions(ID: str):
     try:
-        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interactions.json", 'r') as interactions_file:
+        with open(f"{root_dir}/calculated_structures/{ID.upper()}/interrezidual_interactions.json", 'r') as interactions_file:
             interactions = json.load(interactions_file)
         return jsonify(interactions)
     except FileNotFoundError:
         return jsonify({"status": "not applicable",
-                        "message": f"No results for ID {ID}."}), 406
+                        "message": f"No results for ID {ID.upper()}."}), 406
 
 
 
 @application.route('/download_files')
 def download_files():
-    ID = request.args.get('ID')
+    ID = request.args.get('ID').upper()
     code, ph = ID.split('_')
     if len(code) == 36:
         code = "structure"
@@ -445,40 +462,40 @@ def download_files():
 
 @application.route('/optimised_structure/<ID>')
 def get_optimised_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimised.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/optimised.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/original_structure/<ID>')
 def get_original_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/original.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/original.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/residues_logs/<ID>')
 def get_residues_logs(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/residues.logs'
+    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/residues.logs'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/differences/<ID>')
 def get_differences(ID: str):
-    filepath = f"{root_dir}/calculated_structures/{ID}/differences.json"
+    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/differences.json"
     try:
         return Response(open(filepath, "r").read(), mimetype="text/json")
     except FileNotFoundError:
         return jsonify({"status": "not applicable",
-                        "message": f"No differences data for ID {ID}."}), 406
+                        "message": f"No differences data for ID {ID.upper()}."}), 406
 
 
 @application.route('/warnings/<ID>')
 def get_tables(ID: str):
-    filepath = f"{root_dir}/calculated_structures/{ID}/tables.json"
+    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/tables.json"
     try:
         return Response(open(filepath, "r").read(), mimetype="text/json")
     except FileNotFoundError:
         return jsonify({"status": "not applicable",
-                        "message": f"No warnings data for ID {ID}."}), 406
+                        "message": f"No warnings data for ID {ID.upper()}."}), 406
 
 
 @application.errorhandler(404)
@@ -498,7 +515,7 @@ def get_pdb_file(ID: str, file_type: str):
         return jsonify(
             {"status": "not applicable", "message": f"Unknown file type: {file_type}"}
         ), 404
-    filepath = f"{root_dir}/calculated_structures/{ID}/{file_mapping[file_type]}"
+    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/{file_mapping[file_type]}"
     if not os.path.isfile(filepath):
         return jsonify(
             {"status": "not applicable", "message": f"File not found: {file_type}"}
