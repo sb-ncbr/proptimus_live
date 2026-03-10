@@ -1,6 +1,7 @@
 stages:
   - build-api
   - build-ui
+  - deploy
 
 image:
   name: gcr.io/kaniko-project/executor:v1.24.0-debug
@@ -23,7 +24,7 @@ build-prod-api-image:
         --snapshot-mode=redo
         --compressed-caching=false
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
 
 build-devel-api-image:
   stage: build-api
@@ -38,11 +39,11 @@ build-devel-api-image:
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
+      #changes:
+      #  - api/**
 
 build-prod-ui-image:
   stage: build-ui
-  needs:
-    - build-prod-api-image
   script:
     - /kaniko/executor
         --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
@@ -55,12 +56,10 @@ build-prod-ui-image:
         --snapshot-mode=redo
         --compressed-caching=false
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
 
 build-devel-ui-image:
   stage: build-ui
-  needs:
-    - build-devel-api-image
   script:
     - /kaniko/executor
         --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
@@ -74,3 +73,40 @@ build-devel-ui-image:
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
+      #changes:
+      #  - ui/**
+
+deploy-devel:
+  stage: deploy
+  image: alpine:3.23
+  needs:
+    - job: build-devel-api-image
+      optional: true
+    - job: build-devel-ui-image
+      optional: true
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOY_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh "$DEPLOY_USER@$DEPLOY_HOST" "
+        set -e
+        cd $DEPLOY_PATH
+        #echo '$CI_REGISTRY_PASSWORD' | docker login $CI_REGISTRY -u '$CI_REGISTRY_USER' --password-stdin
+        docker compose pull --quiet devel-api devel-ui
+        docker compose up -d devel-api devel-ui
+      "
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "devel" && $CI_PIPELINE_SOURCE == "push"'
+      #changes:
+      #  - api/**
+      #  - ui/**
+  environment:
+    name: devel
+    url: https://devel.proptimus.biodata.ceitec.cz
+  resource_group: devel
