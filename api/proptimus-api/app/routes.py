@@ -213,10 +213,18 @@ def optimise_structures():
             data_dir = f'{root_dir}/calculated_structures/{ID}'
             pdb_file = f'{data_dir}/original.pdb'
             prepared_pdb_file = f'{data_dir}/prepared.pdb'
+            optimised_pdb_file = f'{data_dir}/optimised.pdb'
+
+            # get original pdb header
+            with open(pdb_file, "r") as f:
+                original_pdb_header = ""
+                for line in f.readlines():
+                    if line.split()[0] in ["ATOM", "HETATM"]:
+                        break
+                    original_pdb_header += line
 
             # estimate calculation time
-            structure = PDBParser(QUIET=True).get_structure(id="structure",
-                                                            file=pdb_file)[0]
+            structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
             atoms = list(structure.get_atoms())
             num_of_atoms = len(atoms) * 2
             estimated_time = num_of_atoms / 10 + 60
@@ -246,14 +254,23 @@ def optimise_structures():
             raphan.optimise()
 
             write_additional_info(original_PDB_file=pdb_file,
-                                  optimised_PDB_file=f"{data_dir}/optimised.pdb",
+                                  optimised_PDB_file=optimised_pdb_file,
                                   unconverged_residues_ids=raphan.unconverged_residues_ids,
                                   data_dir=data_dir)
 
-        except IndexError as e:
+            # add header back because of Mol*
+            optimised_pdb_str = original_pdb_header
+            with open(optimised_pdb_file, "r") as f:
+                for line in f.readlines():
+                    optimised_pdb_str += line
+            with open(optimised_pdb_file, "w") as f:
+                f.write(optimised_pdb_str)
+        except Exception as e:
             print(f"Optimisation failed: {e}")
-
-        running.remove(ID)
+            with open(f"{data_dir}/failed.txt", 'w') as f:
+                f.write(str(e))
+        finally:
+            running.remove(ID)
 
 
 @application.route('/', methods=['GET', 'POST'])
@@ -268,10 +285,11 @@ def main_site():
             pdb_str = request.files['file'].read().decode('utf-8')
 
         else:
-            # get calculation data
             code = request.form.get('code', '').strip().upper()
-            pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
-
+            if len(code) == 4: # structure from PDB
+                pdb_str = requests.get(f'https://files.rcsb.org/download/{code}.pdb').text
+            else:
+                pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
 
         # create data dir and save pdb file
         ID = f'{code}_{ph}'
@@ -285,15 +303,11 @@ def main_site():
             log_file.write(f'{request.remote_addr} {ID} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
 
         # validate PDB file
-        if len(ID) > 30:
-            try:
-                structure = PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
-            except:
-                return jsonify({"status": "not applicable",
-                                "message": "The uploaded PDB file is not valid."}), 406
-            if all([atom.element != "H" for atom in structure.get_atoms()]):
-                return jsonify({"status": "not applicable",
-                                "message": "The uploaded PDB file is missing hydrogen atoms. Please add them and try again."}), 406
+        try:
+            PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
+        except:
+            return jsonify({"status": "not applicable",
+                            "message": "The uploaded PDB file is not valid."}), 406
 
         # create and submit job (common for both paths)
         global optimisers
@@ -348,8 +362,12 @@ def running_progress():
     url = ""
     status = ""
 
+    if Path(f"{root_dir}/calculated_structures/{ID}/failed.txt").exists():
+        status = "running"
+        remaining_time = f"∞ (Optimization failed. Please contact us and provide the ID={ID} so we can fix this issue."
+
     # check status
-    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb'):
+    elif os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb'):
         status = "finished"
         url = url_for('results', ID=ID)
     elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
@@ -373,7 +391,10 @@ def running_progress():
             status = "not applicable"
             message = "The ID was entered in the wrong format. The ID should be of the form <UniProt code>_<pH>."
         else:
-            response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
+            if len(code) == 4:
+                response = requests.head(f'https://files.rcsb.org/download/{code}.pdb')
+            else:
+                response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
             if response.status_code != 200:
                 status = "not applicable"
                 message = (f'The structure with code {code} '
@@ -413,8 +434,12 @@ def download_files():
         code = "structure"
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
-        zip.write(f'{data_dir}/optimised.pdb',f'{code}_optimised.pdb')
-        zip.write(f'{data_dir}/original.pdb', f'{code}_original.pdb')
+        zip.write(f'{data_dir}/original.pdb', f'original.pdb')
+        zip.write(f'{data_dir}/trajectory.pdb', f'trajectory.pdb')
+        zip.write(f'{data_dir}/optimised.pdb',f'optimised.pdb')
+        if Path(f"{data_dir}/prepared.pdb").exists():
+            zip.write(f'{data_dir}/prepared.pdb', f'prepared.pdb')
+
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 

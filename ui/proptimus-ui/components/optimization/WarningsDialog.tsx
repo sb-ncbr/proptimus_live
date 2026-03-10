@@ -700,7 +700,7 @@ export function WarningsDialog({ warnings, isLoading, onFocusResidue, onFocusInt
           className="min-w-55 gap-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-2 border-amber-400 dark:border-amber-600"
         >
           <AlertTriangle className="size-4" />
-          View Warnings
+          View Logs
           <span className="ml-1 rounded-full bg-amber-500 text-white px-2 py-0.5 text-sm font-bold">
             {totalWarnings}
           </span>
