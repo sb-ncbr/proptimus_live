@@ -97,7 +97,7 @@ deploy-devel:
       ssh "$DEPLOY_USER@$DEPLOY_HOST" "
         set -e
         cd $DEPLOY_PATH
-        echo '$CI_REGISTRY_PASSWORD' | docker login $CI_REGISTRY -u '$CI_REGISTRY_USER' --password-stdin
+        #echo '$CI_REGISTRY_PASSWORD' | docker login $CI_REGISTRY -u '$CI_REGISTRY_USER' --password-stdin
         docker compose pull --quiet devel-api devel-ui
         docker compose up -d devel-api devel-ui
       "
