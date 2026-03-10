@@ -44,8 +44,6 @@ build-devel-api-image:
 
 build-prod-ui-image:
   stage: build-ui
-  needs:
-    - build-prod-api-image
   script:
     - /kaniko/executor
         --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
@@ -62,8 +60,6 @@ build-prod-ui-image:
 
 build-devel-ui-image:
   stage: build-ui
-  needs:
-    - build-devel-api-image
   script:
     - /kaniko/executor
         --context "${CI_PROJECT_DIR}/ui/proptimus-ui"
@@ -107,6 +103,9 @@ deploy-devel:
       "
   rules:
     - if: '$CI_COMMIT_BRANCH == "devel" && $CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - api/**
+        - ui/**
   environment:
     name: devel
     url: https://devel.proptimus.biodata.ceitec.cz
