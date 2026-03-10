@@ -15,12 +15,20 @@ export const config = {
     title:
       "PROPTIMUS - Web application for the local optimisation of protein structures",
     description:
-      "PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
+      "PROPTIMUS LIVE is a freely available application for the local constrained α-carbons optimisation of protein structures. It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
     keywords: [
       "PROPTIMUS",
+      "Local optimisation",
+      "Constrained optimisation",
       "Protein Structure Optimization",
       "AlphaFold",
       "AlphaFoldDB",
+      "Bond length optimisation",
+      "Bond angle optimisation",
+      "Dihedral angle optimisation",
+      "PDB",
+      "Protein data bank",
+      "Ligand",
       "pH-dependent optimization",
       "Protein protonation",
       "PROPKA3",

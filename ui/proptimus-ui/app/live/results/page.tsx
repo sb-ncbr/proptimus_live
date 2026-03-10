@@ -329,7 +329,7 @@ function ResultsContent() {
               <Button
                 variant="secondary"
                 size="lg"
-                onClick={() => window.location.href = "/"}
+                onClick={() => window.location.href = "/live"}
                 className="text-primary-foreground"
               >
                 <div className="flex items-center gap-2 text-primary-foreground">

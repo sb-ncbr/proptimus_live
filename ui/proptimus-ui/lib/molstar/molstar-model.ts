@@ -307,10 +307,10 @@ export class MolstarModel {
           : {
               type: "ball-and-stick",
               typeParams: {
-                alpha: 0.49,
+                alpha: 0.6,
               },
               color: "uniform",
-              colorParams: { value: Color(0x555555) },
+              colorParams: { value: Color(0xd2d2d2) },
             };
 
       const representation =

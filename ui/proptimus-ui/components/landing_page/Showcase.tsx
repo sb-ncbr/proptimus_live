@@ -146,9 +146,7 @@ export default function Showcase(): React.JSX.Element {
           How PROPTIMUS LIVE improves structures?
         </h2>
         <p className="text-lg text-gray-600 max-w-5xl mx-auto">
-          Original structures from <a
-            href="https://alphafold.ebi.ac.uk/" target="_blank"
-            rel="noreferrer" className="font-semibold underline">AlphaFold DB</a> are colored gray, while structures optimized by PROPTIMUS LIVE are colored.
+          Original structures are grey, while those optimized by PROPTIMUS LIVE are colored.
         </p>
       </div>
 
