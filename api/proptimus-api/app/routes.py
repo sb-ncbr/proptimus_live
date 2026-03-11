@@ -370,6 +370,18 @@ def results():
     return jsonify({"id": ID.upper(), "code": code, "ph": ph, "pdb_files": pdb_files})
 
 
+@application.route('/api/available_results', methods=['GET'])
+def available_results():
+    ID = request.args.get('ID').upper()
+    if Path(f"{root_dir}/calculated_structures/{ID}").exists():
+        available = True
+    else:
+        available = False
+    return jsonify({"available": available})
+
+
+
+
 @application.route('/api/running_progress', methods=['GET'])
 def running_progress():
 
