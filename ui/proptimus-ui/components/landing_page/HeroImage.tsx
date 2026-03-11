@@ -9,7 +9,7 @@ export default function HeroImage(): React.JSX.Element {
   const firstTwo = name.slice(0, 2);
   const rest = name.slice(2);
   return (
-    <div id="hero" className="relative w-full h-[600px] sm:h-[700px] lg:h-180 overflow-hidden">
+    <div id="hero" className="relative w-full h-[600px] sm:h-[700px] lg:h-200 overflow-hidden">
       {/* Background gradient with scientific pattern */}
       {/* Desktop: Full card, Mobile: Compact version */}
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
@@ -26,7 +26,7 @@ export default function HeroImage(): React.JSX.Element {
         <div className="absolute inset-0 pointer-events-none">
           <img
             src="/protein-bg.svg"
-            className="w-full h-full object-cover opacity-20"
+            className="w-full h-[110%] object-cover opacity-20"
           />
         </div>
 
@@ -60,7 +60,7 @@ export default function HeroImage(): React.JSX.Element {
 
           <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto w-full text-sm sm:text-lg lg:text-xl justify-items-center items-center mt-4 sm:mt-8">
             <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 col-span-1 text-dark-silver">
-              <ChevronsUp className="w-6 h-6 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+              <Gauge className="w-6 h-6 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
               <span className="text-sm sm:text-base lg:text-xl">Fast</span>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 col-span-1 text-dark-silver">
@@ -77,7 +77,7 @@ export default function HeroImage(): React.JSX.Element {
       </div>
 
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-50 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-50 to-transparent" />
     </div>
   );
 }

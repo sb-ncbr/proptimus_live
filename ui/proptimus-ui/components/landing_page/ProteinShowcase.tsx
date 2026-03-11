@@ -70,17 +70,17 @@ function ProteinShowcaseItem({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 pt-2 ">
             <ProteinLink
               href={protein.documentationHref}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all duration-200 font-medium"
+              className="transition-all duration-300 hover:scale-105 inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 font-medium"
             >
               Read More
               <ChevronRight className="ml-2 w-5 h-5"></ChevronRight>
             </ProteinLink>
             <a
               href="#hero"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+              className="transition-all duration-300 hover:scale-105 inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
               Try it Yourself
               <ChevronsUp className="ml-2 w-4 h-4" />

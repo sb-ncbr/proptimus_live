@@ -172,7 +172,7 @@ export default function Showcase(): React.JSX.Element {
         opts={{ align: "start", loop: true }}
         className="w-full"
       >
-        <CarouselContent className="ml-4">
+        <CarouselContent className="ml-4 p-10">
           {showcase_items.map((showcase_item) => (
             <CarouselItem
               key={showcase_item.id}

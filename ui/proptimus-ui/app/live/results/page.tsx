@@ -16,10 +16,12 @@ import { ErrorDisplay } from "@/components/visualizations/ErrorDisplay";
 import Header from "@/components/layout/Header";
 import ProteinResultsCard from "@/components/optimization/ProteinResultsCard";
 import { InteractionsCard } from "@/components/optimization/InteractionsCard";
-import { Button } from "@/components/common/Button";
-import { HardDriveDownload, ArrowLeft } from "lucide-react";
+import { Button } from "@e-infra/design-system";
+import { HardDriveDownload } from "lucide-react";
 import { useInteractionsData } from "@/hooks/useInteractionsData";
 import { useWarnings } from "@/hooks/useWarnings";
+import { useAvailableResults } from "@/hooks/useProptimusApi";
+import Link from "next/link";
 import { WarningsDialogWrapper } from "@/components/optimization";
 import { toast } from "sonner";
 import { MolstarProvider } from "@/components/context/MolstarContext";
@@ -64,17 +66,27 @@ function ResultsContent() {
     refetch: downloadFiles,
   } = useDownloadFiles(jobId || "", { enabled: false });
 
-  // Fetch interactions data
+  // Fetch interactions data — only once optimization is finished
   const {
     data: interactionsData,
     isLoading: interactionsLoading,
-  } = useInteractionsData(jobId || "");
+  } = useInteractionsData(jobId || "", {
+    enabled: progressData?.status === "finished",
+  });
 
-  // Fetch warnings data
+  // Fetch warnings data — only once optimization is finished
   const {
     data: warningsData,
     isLoading: warningsLoading,
-  } = useWarnings(jobId || "");
+  } = useWarnings(jobId || "", {
+    enabled: progressData?.status === "finished",
+  });
+
+  // Check if the job ID exists in the database
+  const {
+    data: availabilityData,
+    isLoading: availabilityLoading,
+  } = useAvailableResults(jobId || "");
 
   // Only show results when both PDB structures are loaded
   React.useEffect(() => {
@@ -126,6 +138,37 @@ function ResultsContent() {
     );
   }
 
+  // Show loading while checking availability
+  if (availabilityLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <OptimizationLoader status="queued" message="Checking availability..." />
+      </div>
+    );
+  }
+
+  // Show not-found page when ID is not in the database
+  if (availabilityData && !availabilityData.available) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="bg-white rounded-2xl shadow-xl p-10 max-w-lg w-full text-center border border-gray-200">
+          <h1 className="text-4xl font-bold text-primary mb-10">
+            Results Not Found
+          </h1>
+          <p className="text-lg text-gray-600 mb-10">
+            Sorry, we don&apos;t have this optimization yet. The ID you provided does not match any existing results in our database.
+          </p>
+          <Link
+            href="/live"
+            className="inline-block px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-all duration-200"
+          >
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Handle progress loading error
   if (progressError) {
     return (
@@ -134,24 +177,23 @@ function ResultsContent() {
           <h1 className="text-4xl font-bold text-primary mb-10">
             Something went wrong
           </h1>
-          <p className="text-lg text-gray-600 text-primary mb-10">
+          <p className="text-lg text-primary mb-10">
             {progressError instanceof Error ? progressError.message : 'Failed to load optimization progress'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
+            <Button
               type="button"
               onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-all duration-200 cursor-pointer"
             >
               Try Again
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => window.location.href = '/'}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
             >
               Go Home
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -170,12 +212,12 @@ function ResultsContent() {
             {progressData.message ||
               "An error occurred during protein optimization."}
           </p>
-          <button
+          <Button
+            type="button"
             onClick={() => window.history.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Go Back
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -217,24 +259,23 @@ function ResultsContent() {
           <h1 className="text-4xl font-bold text-primary mb-10">
             Something went wrong
           </h1>
-          <p className="text-lg text-gray-600 text-primary mb-10">
+          <p className="text-lg text-primary mb-10">
             Failed to load protein structures: {errorMessage}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
+            <Button
               type="button"
               onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-all duration-200 cursor-pointer"
             >
               Try Again
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => window.location.href = '/'}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200"
             >
               Go Home
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -255,9 +296,9 @@ function ResultsContent() {
         }
       `}</style>
       <Header />
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 mt-8">
+      <div className="mx-auto max-w-7xl px-6 pt-10 pb-4">
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl font-bold text-gray-900 mb-8 dark:text-gray-100">
             Optimisation Results
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -311,33 +352,23 @@ function ResultsContent() {
           </div>
           <div className="flex justify-between items-center">
             <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={handleDownload}
-                disabled={downloadLoading}
-                className="text-primary-foreground"
-              >
-                <div className="flex items-center gap-2 text-primary-foreground">
-                  <HardDriveDownload className="w-4 h-4" />
-                  {downloadLoading ? "Downloading..." : "Download Optimized Structure"}
-                </div>
-              </Button>
+
               <WarningsDialogWrapper warnings={warningsData} isLoading={warningsLoading} />
             </div>
             <div>
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={() => window.location.href = "/live"}
-                className="text-primary-foreground"
-              >
-                <div className="flex items-center gap-2 text-primary-foreground">
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Main Page
-                </div>
-              </Button>
             </div>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={handleDownload}
+              disabled={downloadLoading}
+              className="text-primary-foreground"
+            >
+              <div className="flex items-center gap-2 text-primary-foreground">
+                <HardDriveDownload className="w-4 h-4" />
+                {downloadLoading ? "Downloading..." : "Download Optimized Structure"}
+              </div>
+            </Button>
           </div>
         </div>
       </div>

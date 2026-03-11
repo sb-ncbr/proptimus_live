@@ -14,7 +14,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ protein }: ProductCardProps) {
   return (
-    <div className="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+    <div className="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden h-full flex flex-col">
       {/* MolStar Canvas Placeholder */}
       <div className="w-full h-48 bg-gray-300 flex items-center justify-center">
         <NGLWrapper
@@ -28,7 +28,7 @@ export default function ProductCard({ protein }: ProductCardProps) {
       </div>
 
       {/* Card Content */}
-      <div className="p-6">
+      <div className="p-6 flex flex-col flex-1">
         {/* Header with protein name and UniProt ID */}
         <div className="mb-3">
           <h3 className="text-xl font-bold text-secondary mb-1">
@@ -45,7 +45,7 @@ export default function ProductCard({ protein }: ProductCardProps) {
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 leading-relaxed text-sm">
+        <p className="text-gray-600 leading-relaxed text-sm flex-1">
           {protein.description}
         </p>
       </div>

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Warnings } from "@/lib/molstar/types";
 
-export function useWarnings(jobId: string) {
+export function useWarnings(jobId: string, options?: { enabled?: boolean }) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
   return useQuery<Warnings>({
@@ -20,8 +20,8 @@ export function useWarnings(jobId: string) {
       }
       return response.json();
     },
-    enabled: !!jobId,
-    staleTime: 60000, // Data is fresh for 60 seconds
-    retry: 2,
+    enabled: !!jobId && options?.enabled !== false,
+    staleTime: 60000,
+    retry: false,
   });
 }
