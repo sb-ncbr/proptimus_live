@@ -195,11 +195,13 @@ def optimise_substructure(substructure_data,
     substructure = PDBParser(QUIET=True).get_structure(id="structure",
                                                        file=substructure_data.data_dir / f"substructure_{iteration}.pdb")
     substructure_atoms = list(substructure.get_atoms())
+    kdtree = NeighborSearch(substructure_atoms)
 
     # definitions of which atoms should be constrained during optimization
     # optimized atoms are not constrained during optimisation and written into the overall structure
     # flexible atoms are not constrained during optimisation and are not written into the overall structure
     # constrained atoms are constrained during optimisation and are not written into the overall structure
+    constrained_atoms = []
     constrained_atoms_indices = []
     optimised_atoms_indices = []
     rigid_atoms = []  # constrained atoms without atoms close to carbons with broken bonds
@@ -208,9 +210,17 @@ def optimise_substructure(substructure_data,
                              start=1):
         if atom.name == "CA" and atom.element == "C" and not atom.get_parent().full_id[0].startswith("H_"):
             atom.mode = "constrained"
+        elif atom.get_parent().resname == "HOH" and atom.element == "O":
+            if atom in optimised_atoms and any(atom.get_parent().resname != "HOH" for atom in kdtree.search(center=atom.coord,
+                                                                                                            radius=3.5,
+                                                                                                            level="A")):
+                atom.mode = "optimised"
+            else:
+                atom.mode = "constrained"
+
         elif atom in optimised_atoms:
             atom.mode = "optimised"
-        elif any(dist(atom.coord, ra.coord) < flexible_radius for ra in optimised_atoms):
+        elif any(dist(atom.coord, ra.coord) < flexible_radius for ra in optimised_atoms): # todo, rewrite with kdtree
             atom.mode = "flexible"
         else:
             atom.mode = "constrained"
@@ -218,12 +228,17 @@ def optimise_substructure(substructure_data,
         if atom.mode == "optimised":
             optimised_atoms_indices.append(i)
         elif atom.mode == "constrained":
+            constrained_atoms.append(atom)
             constrained_atoms_indices.append(i)
             if any(dist(atom.coord, x) < 2 for x in carbons_with_broken_bonds_coord):
                 continue
             else:
                 rigid_atoms.append(atom)
                 rigid_atoms_indices.append(i)
+
+    if len(rigid_atoms) < 5:
+        rigid_atoms_indices = constrained_atoms_indices
+        rigid_atoms = constrained_atoms
 
     # prepare xtb settings file
     max_cycle = len(optimised_atoms_indices) + iteration
