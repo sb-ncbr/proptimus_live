@@ -302,14 +302,14 @@ def main_site():
             pdb_str = request.files['file'].read().decode('utf-8')
 
         else:
-            code = request.form.get('code', '').strip().upper()
+            code = request.form.get('code', '').strip()
             if len(code) == 4: # structure from PDB
                 pdb_str = requests.get(f'https://files.rcsb.org/download/{code}.pdb').text
             else:
                 pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
 
         # create data dir and save pdb file
-        ID = f'{code}_{ph}'
+        ID = f'{code}_{ph}'.upper()
         data_dir = f'{root_dir}/calculated_structures/{ID}'
         os.makedirs(data_dir, exist_ok=True)
         with open(f'{data_dir}/original.pdb', 'w') as pdb:
