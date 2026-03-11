@@ -39,8 +39,8 @@ build-devel-api-image:
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
-      changes:
-        - api/**
+      #changes:
+      #  - api/**
 
 build-prod-ui-image:
   stage: build-ui
@@ -73,8 +73,8 @@ build-devel-ui-image:
         --compressed-caching=false
   rules:
     - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
-      changes:
-        - ui/**
+      #changes:
+      #  - ui/**
 
 deploy-devel:
   stage: deploy
@@ -97,15 +97,15 @@ deploy-devel:
       ssh "$DEPLOY_USER@$DEPLOY_HOST" "
         set -e
         cd $DEPLOY_PATH
-        echo '$CI_REGISTRY_PASSWORD' | docker login $CI_REGISTRY -u '$CI_REGISTRY_USER' --password-stdin
+        #echo '$CI_REGISTRY_PASSWORD' | docker login $CI_REGISTRY -u '$CI_REGISTRY_USER' --password-stdin
         docker compose pull --quiet devel-api devel-ui
         docker compose up -d devel-api devel-ui
       "
   rules:
     - if: '$CI_COMMIT_BRANCH == "devel" && $CI_PIPELINE_SOURCE == "push"'
-      changes:
-        - api/**
-        - ui/**
+      #changes:
+      #  - api/**
+      #  - ui/**
   environment:
     name: devel
     url: https://devel.proptimus.biodata.ceitec.cz
