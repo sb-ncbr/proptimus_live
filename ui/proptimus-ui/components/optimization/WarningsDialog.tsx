@@ -286,7 +286,7 @@ function ResidueTable({ data, onFocus, state, onStateChange }: ResidueTableProps
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search warnings..."
+            placeholder="Search logs..."
             value={state.globalFilter ?? ""}
             onChange={(e) => onStateChange({ ...state, globalFilter: e.target.value })}
             className="w-full h-9 pl-8 pr-3 rounded-md border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
@@ -476,7 +476,7 @@ function InteractionTable({ data, onFocus, state, onStateChange }: InteractionTa
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search warnings..."
+            placeholder="Search logs..."
             value={state.globalFilter ?? ""}
             onChange={(e) => onStateChange({ ...state, globalFilter: e.target.value })}
             className="w-full h-9 pl-8 pr-3 rounded-md border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
@@ -573,7 +573,7 @@ function ResidueTabContent({ noDataMessage, data, onFocus, state, onStateChange 
         <ResidueTable data={data} onFocus={onFocus} state={state} onStateChange={onStateChange} />
       </div>
       <p className="text-sm text-muted-foreground">
-        Total: {data.length} warning{data.length !== 1 ? "s" : ""}
+        Total: {data.length} log{data.length !== 1 ? "s" : ""}
       </p>
     </div>
   );
@@ -603,7 +603,7 @@ function InteractionTabContent({ noDataMessage, data, onFocus, state, onStateCha
         <InteractionTable data={data} onFocus={onFocus} state={state} onStateChange={onStateChange} />
       </div>
       <p className="text-sm text-muted-foreground">
-        Total: {data.length} warning{data.length !== 1 ? "s" : ""}
+        Total: {data.length} log{data.length !== 1 ? "s" : ""}
       </p>
     </div>
   );
@@ -699,7 +699,6 @@ export function WarningsDialog({ warnings, isLoading, onFocusResidue, onFocusInt
           size="lg"
           className="min-w-55 gap-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-2 border-amber-400 dark:border-amber-600"
         >
-          <AlertTriangle className="size-4" />
           View Logs
           <span className="ml-1 rounded-full bg-amber-500 text-white px-2 py-0.5 text-sm font-bold">
             {totalWarnings}
@@ -710,10 +709,10 @@ export function WarningsDialog({ warnings, isLoading, onFocusResidue, onFocusInt
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Structure Warnings
+            Optimisation logs
           </DialogTitle>
           <DialogDescription>
-            The following warnings were found during processing. Click column headers to sort.
+            Click column headers to sort.
           </DialogDescription>
         </DialogHeader>
         <Tabs value={persistedState.activeTab} onValueChange={(value) => setPersistedState(prev => ({ ...prev, activeTab: value }))} className="w-full">

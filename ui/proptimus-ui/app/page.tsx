@@ -64,8 +64,19 @@ export default function LandingPage(): React.JSX.Element {
       </header>
 
       {/* Hero */}
-      <section className="py-24 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
+      <section className="relative py-24 px-4 overflow-hidden">
+        {/* Protein background image */}
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src="/protein-bg.svg"
+            className="w-full h-full object-cover opacity-20 bg-blue-200"
+            aria-hidden="true"
+          />
+        </div>
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background pointer-events-none" />
+
+        <div className="relative z-10 container mx-auto text-center max-w-4xl">
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
             PR
             <span className="text-muted-foreground">OPTIMUS</span>

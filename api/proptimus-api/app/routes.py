@@ -163,7 +163,7 @@ def write_additional_info(original_PDB_file,
     repair_logs = sorted(repair_logs.values(), key=lambda x: x["residue_id"])
     # optimisation issues
     for unconverged_residue_id in unconverged_residues_ids:
-        unconverged_residue_id["message"] = "Residue was not converged."
+        unconverged_residue_id["message"] = "Optimisation of residue was not converged."
     # interactions
     interactions_messages = defaultdict(list)
     for added_hydrogen_bond in interactions["hbonds optimised"] - interactions["hbonds original"]:
@@ -257,9 +257,11 @@ def optimise_structures():
                 pdb_file = prepared_pdb_file
 
             # estimate calculation time
-            atoms = list(structure.get_atoms())
-            num_of_atoms = len(atoms) * 2
-            estimated_time = num_of_atoms / 10 + 60
+            structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
+            num_of_atoms = len(list(structure.get_atoms()))
+            print(num_of_atoms)
+            print(num_of_atoms / 15 + 100)
+            estimated_time = num_of_atoms / 15 + 100
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 
@@ -404,14 +406,19 @@ def running_progress():
             status = "queued"
         elif ID in running:
             status = "running"
-            with open(f"{root_dir}/calculated_structures/{ID}/estimated_time.txt", 'r') as timefile:
-                remaining_seconds = float(timefile.read()) - time()
-                if remaining_seconds < 0:
-                    remaining_time = "The calculation is taking longer than usual. If the calculation does not finish soon, please contact us."
-                elif remaining_seconds < 60:
-                    remaining_time = "less then 1 minute"
-                else:
-                    remaining_time = f"{round(remaining_seconds / 60)} minutes"
+            try:
+                with open(f"{root_dir}/calculated_structures/{ID}/estimated_time.txt", 'r') as timefile:
+                    remaining_seconds = float(timefile.read()) - time()
+                    if remaining_seconds < 0:
+                        remaining_time = "The calculation is taking longer than usual. If the calculation does not finish soon, please contact us."
+                    elif remaining_seconds < 60:
+                        remaining_time = "less then 1 minute"
+                    elif remaining_seconds < 120:
+                        remaining_time = "1 minute"
+                    else:
+                        remaining_time = f"{round(remaining_seconds / 60)} minutes"
+            except FileNotFoundError:
+                remaining_time = ""
 
     else:
         try:

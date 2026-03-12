@@ -12,6 +12,7 @@ from multiprocessing import Pool, RawArray
 from pathlib import Path
 from rdkit import Chem
 from time import time
+import resource
 
 
 def load_arguments():
@@ -258,8 +259,9 @@ def optimise_substructure(substructure_data,
         xtb_settings_file.write(substructure_settings)
 
     # optimise substructure by xtb
+    resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
     env = os.environ.copy()
-    env.update({"OMP_STACKSIZE": "1G", "OMP_NUM_THREADS": "1,1", "OMP_MAX_ACTIVE_LEVELS": "1", "MKL_NUM_THREADS": "1"})
+    env.update({"OMP_STACKSIZE": "2G", "OMP_NUM_THREADS": "1,1", "OMP_MAX_ACTIVE_LEVELS": "1", "MKL_NUM_THREADS": "1"})
     subprocess.run(["xtb", f"substructure_{iteration}.pdb", "--gfnff", "--input", f"xtb_settings_{iteration}.inp", "--opt", "tight", "--alpb", "water", "--verbose"],
                    cwd=substructure_data.data_dir,
                    stdout=open(substructure_data.data_dir / f"xtb_output_{iteration}.txt", "w"),
