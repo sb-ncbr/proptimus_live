@@ -296,9 +296,9 @@ function ResultsContent() {
         }
       `}</style>
       <Header />
-      <div className="mx-auto max-w-7xl px-6 pt-10 pb-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-10 pb-4">
         <div className="text-center space-y-3">
-          <h1 className="text-4xl font-bold text-gray-900 mb-8 dark:text-gray-100">
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-8 dark:text-gray-100">
             Optimisation Results
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -307,13 +307,13 @@ function ResultsContent() {
         </div>
       </div>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
           {/* Header Section */}
-          <div className="mb-6 flex justify-between items-center">
+          <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
 
             {/* Protein Information Table */}
             <div className="w-full max-w-md">
-              <table className="w-full text-xl">
+              <table className="w-full text-base sm:text-xl">
                 <tbody>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <td className="py-3 pr-4 font-semibold text-gray-900 dark:text-gray-100">
@@ -342,7 +342,9 @@ function ResultsContent() {
                 </tbody>
               </table>
             </div>
-            <InteractionsCard data={interactionsData} isLoading={interactionsLoading} />
+            <div className="w-full lg:w-auto">
+              <InteractionsCard data={interactionsData} isLoading={interactionsLoading} />
+            </div>
           </div>
           {/* Visualization Section */}
           <div className="mb-6">
@@ -350,19 +352,16 @@ function ResultsContent() {
               jobId={jobId}
             />
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex gap-3">
-
               <WarningsDialogWrapper warnings={warningsData} isLoading={warningsLoading} />
-            </div>
-            <div>
             </div>
             <Button
               variant="secondary"
               size="lg"
               onClick={handleDownload}
               disabled={downloadLoading}
-              className="text-primary-foreground"
+              className="text-primary-foreground w-full sm:w-auto"
             >
               <div className="flex items-center gap-2 text-primary-foreground">
                 <HardDriveDownload className="w-4 h-4" />

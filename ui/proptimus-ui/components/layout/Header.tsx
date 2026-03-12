@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 export default function Header(): React.JSX.Element {
   const pathname = usePathname();
   const isLive = pathname?.startsWith("/live");
+  const isResults = pathname?.startsWith("/live/results");
 
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
@@ -15,7 +16,7 @@ export default function Header(): React.JSX.Element {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link
-            href="/"
+            href={isResults ? "/live" : "/"}
             className="flex items-center group transition-all duration-300 hover:scale-105 hover:drop-shadow-md"
           >
             <span className="text-2xl font-bold text-zinc-900 group-hover:brightness-110 transition-all duration-300">

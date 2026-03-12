@@ -55,11 +55,11 @@ export function MolstarControls() {
   };
 
   return (
-    <div className="flex gap-4 items-end">
+    <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-stretch sm:items-end">
       <div className="flex flex-col gap-2">
         <Label htmlFor="scene-select">Scene</Label>
         <Select value={currentScene} onValueChange={handleSceneChange}>
-          <SelectTrigger id="scene-select" className="min-w-55">
+          <SelectTrigger id="scene-select" className="w-full sm:min-w-55">
             <SelectValue placeholder="Select scene" />
           </SelectTrigger>
           <SelectContent>
@@ -74,7 +74,7 @@ export function MolstarControls() {
       <div className="flex flex-col gap-2">
         <Label htmlFor="color-select">Coloring</Label>
         <Select value={currentColor} onValueChange={handleColorChange}>
-          <SelectTrigger id="color-select" className="min-w-55">
+          <SelectTrigger id="color-select" className="w-full sm:min-w-55">
             <SelectValue placeholder="Select color" />
           </SelectTrigger>
           <SelectContent>
