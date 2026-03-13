@@ -1,3 +1,4 @@
+export { default as CitingSection } from "./CitingSection";
 export { default as HeroImage } from "./HeroImage";
 export { default as LicenseSection } from "./LicenseSection";
 export { default as MoreSection } from "./MoreSection";

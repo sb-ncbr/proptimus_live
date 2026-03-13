@@ -975,8 +975,8 @@ class PrimaryIntegrityMeasuresTaker:
                     self._log_file.parent.mkdir(exist_ok=True)
                 else:
                     self._log_file = self._correction_dir/'log.txt'
-                with open(self._log_file, mode='a') as log_file:
-                    log_file.write(self._log)
+                # with open(self._log_file, mode='a') as log_file:
+                #     log_file.write(self._log)
 
         # log into a .json file
         if not self._from_executor:

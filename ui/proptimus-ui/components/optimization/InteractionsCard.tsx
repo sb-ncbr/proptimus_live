@@ -24,7 +24,7 @@ interface InteractionsCardProps {
 export function InteractionsCard({ data, isLoading }: InteractionsCardProps) {
     if (isLoading) {
         return (
-            <Card className="p-6 bg-white rounded-lg shadow-md border border-gray-200 animate-pulse">
+            <Card className="p-6 w-full bg-white rounded-lg shadow-md border border-gray-200 animate-pulse">
                 <h3 className="text-xl font-semibold text-gray-700 mb-4">
                     Inter-residual Interactions
                 </h3>
@@ -39,7 +39,7 @@ export function InteractionsCard({ data, isLoading }: InteractionsCardProps) {
 
     if (!data || data["hbonds original"] === undefined) {
         return (
-            <Card className="p-6 bg-white rounded-lg shadow-md border border-gray-200">
+            <Card className="p-6 w-full bg-white rounded-lg shadow-md border border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-700 mb-4">
                     Inter-residual Interactions
                 </h3>
@@ -77,7 +77,7 @@ export function InteractionsCard({ data, isLoading }: InteractionsCardProps) {
     ];
 
     return (
-        <Card className="p-6 bg-white rounded-lg shadow-md border border-gray-200">
+        <Card className="p-6 w-full bg-white rounded-lg shadow-md border border-gray-200">
             <h3 className="text-xl font-semibold text-gray-700 mb-4">
                 Inter-residual Interactions
             </h3>

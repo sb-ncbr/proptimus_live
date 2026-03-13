@@ -13,23 +13,23 @@ export default function Footer(): React.JSX.Element {
             <h3 className="text-xl font-semibold mb-6">Collaboration</h3>
             <div className="grid grid-cols-4 gap-6">
               <a
-                href="https://www.muni.cz/"
+                href="https://www.ncbr.muni.cz/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center justify-center p-2 transition-transform duration-300 hover:scale-110 bg-white rounded-lg"
               >
                 <Image
-                  src="/assets/img/muni.png"
-                  alt="Masaryk University"
-                  width={80}
-                  height={60}
+                  src="/assets/img/ncbr-logo.png"
+                  alt="National Centre for Biomolecular Research"
+                  width={160}
+                  height={140}
                   className="object-contain"
                 />
               </a>
               <a
                 href="https://www.ics.muni.cz/"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noo pener noreferrer"
                 className="group flex items-center justify-center p-2 transition-transform duration-300 hover:scale-110 bg-white rounded-lg"
               >
                 <Image

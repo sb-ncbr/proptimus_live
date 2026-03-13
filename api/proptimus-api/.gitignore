@@ -136,3 +136,5 @@ dmypy.json
 
 .devcontainer
 .vscode
+
+app/calculated_structures/**/*

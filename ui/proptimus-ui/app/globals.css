@@ -1,5 +1,8 @@
 @import "tailwindcss";
+@import "@e-infra/design-system/setup.css";
 @import "tw-animate-css";
+
+@source "../node_modules/@e-infra/design-system/dist";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -147,14 +150,15 @@
 }
 
 .silver-shimmer {
-  background: linear-gradient(100deg,
-      #f8f8f8 0%,      /* very bright silver */
-      #ffffff 15%,     /* pure white highlight */
-      #f5f5f5 30%,     /* bright highlight */
-      #eaeaea 45%,     /* bright mid */
-      #d0d0d0 60%,     /* bright mid */
-      #f8f8f8 75%,     /* very bright highlight */
-      #ffffff 90%      /* pure white highlight */
+  background: linear-gradient(
+    100deg,
+    #f8f8f8 0%,
+    /* very bright silver */ #ffffff 15%,
+    /* pure white highlight */ #f5f5f5 30%,
+    /* bright highlight */ #eaeaea 45%,
+    /* bright mid */ #d0d0d0 60%,
+    /* bright mid */ #f8f8f8 75%,
+    /* very bright highlight */ #ffffff 90% /* pure white highlight */
   );
   background-size: 400% 100%;
   background-repeat: repeat-x;
@@ -162,18 +166,30 @@
   background-clip: text;
   color: transparent;
   animation: silver-shimmer 6s linear infinite;
-  text-shadow: 0 0 2px rgba(0,0,0,0.08);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 .silver-text {
-  background: linear-gradient(90deg, #c2c2c2, #efefef 40%, #d9d9d9 50%, #c2c2c2);
+  background: linear-gradient(
+    90deg,
+    #c2c2c2,
+    #efefef 40%,
+    #d9d9d9 50%,
+    #c2c2c2
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .dark-silver-text {
-  background: linear-gradient(90deg, #595959, #8c8c8c 40%, #737373 50%, #595959);
+  background: linear-gradient(
+    90deg,
+    #595959,
+    #8c8c8c 40%,
+    #737373 50%,
+    #595959
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -204,23 +220,44 @@
 
 /* File validation shake animation */
 @keyframes input-shake {
-  0%, 100% { 
-    transform: translateX(0); 
+  0%,
+  100% {
+    transform: translateX(0);
   }
-  20% { 
-    transform: translateX(-8px); 
+  20% {
+    transform: translateX(-8px);
   }
-  40% { 
-    transform: translateX(8px); 
+  40% {
+    transform: translateX(8px);
   }
-  60% { 
-    transform: translateX(-8px); 
+  60% {
+    transform: translateX(-8px);
   }
-  80% { 
-    transform: translateX(8px); 
+  80% {
+    transform: translateX(8px);
   }
 }
 
 .shake-animation {
   animation: input-shake 0.4s ease-in-out;
+}
+
+/* Hide molstar sequence status bar when controls are hidden */
+.msp-hide-sequence-status .msp-sequence-select {
+  display: none !important;
+}
+
+/* Adjust sequence wrapper position when status bar is hidden */
+.msp-hide-sequence-status .msp-sequence-wrapper-non-empty {
+  top: 0 !important;
+}
+
+/* Decrease sequence view height */
+.msp-layout-top {
+  height: 70px !important;
+}
+
+/* Adjust main viewport to account for smaller sequence view */
+.msp-layout-main {
+  top: 70px !important;
 }

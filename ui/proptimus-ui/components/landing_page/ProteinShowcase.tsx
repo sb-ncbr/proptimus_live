@@ -70,17 +70,17 @@ function ProteinShowcaseItem({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-3 pt-2 ">
             <ProteinLink
               href={protein.documentationHref}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all duration-200 font-medium"
+              className="transition-all duration-300 hover:scale-105 inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 font-medium"
             >
               Read More
               <ChevronRight className="ml-2 w-5 h-5"></ChevronRight>
             </ProteinLink>
             <a
               href="#hero"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium"
+              className="transition-all duration-300 hover:scale-105 inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
               Try it Yourself
               <ChevronsUp className="ml-2 w-4 h-4" />
@@ -108,7 +108,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       fullDescription:
         "PROPTIMUS LIVE optimises protein structures using the RAPHAN method, which is a rapid alternative to optimisation with constrained α-carbons. RAPHAN is an iterative divide-and-conquer method, which divides the protein into overlapping substructures and optimises each substructure separately. Substructures are optimised by physics-based GFN-Force-Field, designed to combine high force-field speed with the accuracy of QM methods.",
       imageSrc: schema,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
     {
       id: 2,
@@ -118,7 +118,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       fullDescription:
         "The RAPHAN method produces structures comparable to structures optimised by GFN-Force-Field with constrained α-carbons. The mean absolute deviation of atomic positions is approximately 0.03 Å, and the 99th percentile is 0.33 Å. As can be seen in the histogram, structures may differ exceptionally for highly flexible residues.",
       imageSrc: histogram,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
     {
       id: 3,
@@ -126,14 +126,14 @@ export default function ProteinShowcase(): React.JSX.Element {
       uniprotId: "Optimisation times for RAPHAN and GFN-FF constrained α-carbons optimisations",
       description: "RAPHAN optimises proteins in minutes.",
       fullDescription:
-        "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes with an average speed of 1000 atoms per minute.",
+        "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises proteins without ligands at an average speed of 1000 atoms per minute.",
       imageSrc: times,
-      documentationHref: "https://github.com/sb-ncbr/proptimus_live/wiki",
+      documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-16">
+    <div className="w-full max-w-7xl mx-auto px-6 py-16">
       <div className="text-center mb-8">
         <h2 className="text-3xl lg:text-4xl font-bold text-secondary mb-4">
           About the RAPHAN approach

@@ -10,10 +10,17 @@ interface InteractionsData {
   "pipi optimised"?: number;
   "catpi original"?: number;
   "catpi optimised"?: number;
+  "number of atoms"?: number;
 }
 
-export function useInteractionsData(jobId: string) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+export function useInteractionsData(
+  jobId: string,
+  options?: { enabled?: boolean }
+) {
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:5000" ||
+    "http://proptimus.ceitec.cz/api";
 
   return useQuery<InteractionsData>({
     queryKey: ["interactions", jobId],
@@ -31,16 +38,8 @@ export function useInteractionsData(jobId: string) {
       }
       return response.json();
     },
-    enabled: !!jobId,
-    staleTime: 5000, // Data is fresh for 5 seconds
-    refetchInterval: (query) => {
-      // Stop refetching if we have the interaction data
-      const data = query.state.data;
-      if (data && data["hbonds original"] !== undefined) {
-        return false;
-      }
-      // Otherwise refetch every 3 seconds
-      return 3000;
-    },
+    enabled: !!jobId && options?.enabled !== false,
+    staleTime: 5000,
+    retry: false,
   });
 }

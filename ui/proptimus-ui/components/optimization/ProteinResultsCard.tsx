@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, Clock, Play } from 'lucide-react';
-import { useResults, useResultsStats } from '../../hooks/useProptimusApi';
+import { useResultsStats, ResultsStatsResponse } from '../../hooks/useProptimusApi';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { cn } from "@/lib/utils"
 
@@ -10,30 +10,8 @@ interface ProteinResultsCardProps {
     className?: string;
 }
 
-interface ResultsData {
-    calculated: number;
-    queued: number;
-    running: number;
-}
-
 export default function ProteinResultsCard({ className = "", compact = false }: ProteinResultsCardProps & { compact?: boolean }) {
-    const { data, isLoading, error } = useResultsStats();
-
-    // Parse the results data if it's a JSON string
-    let results: ResultsData | null = null;
-    if (data) {
-        try {
-            // Try to parse as JSON first
-            const parsed = JSON.parse(data);
-            if (parsed.calculated !== undefined && parsed.queued !== undefined && parsed.running !== undefined) {
-                results = parsed;
-            }
-        } catch {
-            // If not JSON, try to extract from HTML or other format
-            // This is a fallback - you might need to adjust based on your actual data format
-            results = { calculated: 0, queued: 0, running: 0 };
-        }
-    }
+    const { data: results, isLoading, error } = useResultsStats();
 
     if (isLoading) {
         return (

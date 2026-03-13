@@ -88,13 +88,13 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <Script
-          src="https://cdn.jsdelivr.net/npm/molstar@latest/build/viewer/molstar.js"
+          src="/vendor/molstar/molstar.js"
           strategy="beforeInteractive"
         />
         <link
           rel="stylesheet"
           type="text/css"
-          href="https://cdn.jsdelivr.net/npm/molstar@latest/build/viewer/molstar.css"
+          href="/vendor/molstar/molstar.css"
         />
       </head>
       <body

@@ -2,21 +2,33 @@ export const config = {
   app: {
     name: "PROPTIMUS",
     hero: "Constrained α-carbons optimisation <br/> of protein structures",
-    fullName: "PROPTIMUS - Web application for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database.",
-    description: "PROPTIMUS is a web-based application that allows for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database. Users can upload their own protein structures in PDB format, and the application will perform local optimisation using state-of-the-art molecular dynamics simulations. The results are then visualised in an interactive 3D viewer, allowing users to explore the optimised structures and compare them with the original predictions.",
+    fullName:
+      "PROPTIMUS - Web application for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database.",
+    description:
+      "PROPTIMUS is a web-based application that allows for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database. Users can upload their own protein structures in PDB format, and the application will perform local optimisation using state-of-the-art molecular dynamics simulations. The results are then visualised in an interactive 3D viewer, allowing users to explore the optimised structures and compare them with the original predictions.",
     version: "1.0.0",
     author: "PROPTIMUS Team",
     url: "https://fffold.muni.cz",
     domain: "fffold.muni.cz",
   },
   meta: {
-    title: "PROPTIMUS - Web application for the local optimisation of protein structures",
-    description: "PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
+    title:
+      "PROPTIMUS - Web application for the local optimisation of protein structures",
+    description:
+      "PROPTIMUS LIVE is a freely available application for the local constrained α-carbons optimisation of protein structures. It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach. This website is free and open to all users, with no login requirement.",
     keywords: [
       "PROPTIMUS",
+      "Local optimisation",
+      "Constrained optimisation",
       "Protein Structure Optimization",
       "AlphaFold",
       "AlphaFoldDB",
+      "Bond length optimisation",
+      "Bond angle optimisation",
+      "Dihedral angle optimisation",
+      "PDB",
+      "Protein data bank",
+      "Ligand",
       "pH-dependent optimization",
       "Protein protonation",
       "PROPKA3",
@@ -38,15 +50,18 @@ export const config = {
       type: "website",
       locale: "en_US",
       siteName: "PROPTIMUS",
-      title: "PROPTIMUS - Web application for the local optimisation of protein structures",
-      description: "PROPTIMUS is a web-based application that allows for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database.",
+      title:
+        "PROPTIMUS - Web application for the local optimisation of protein structures",
+      description:
+        "PROPTIMUS is a web-based application that allows for the local optimisation of protein structures predicted by the AlphaFold2 algorithm and deposited in the AlphaFoldDB database.",
       image: "/assets/proptimus-preview.png",
       imageAlt: "PROPTIMUS - Protein Structure Optimization",
     },
     twitter: {
       card: "summary_large_image",
       title: "PROPTIMUS - Protein Structure Optimization",
-      description: "Web application for the local optimisation of protein structures predicted by AlphaFold2 and deposited in the AlphaFoldDB database.",
+      description:
+        "Web application for the local optimisation of protein structures predicted by AlphaFold2 and deposited in the AlphaFoldDB database.",
       image: "/assets/proptimus-preview.png",
       imageAlt: "PROPTIMUS - Protein Structure Optimization",
     },
@@ -68,7 +83,7 @@ export const config = {
   ],
   navigation: [
     { name: "Home", href: "/" },
-    { name: "Search", href: "/search" },
+    { name: "Live", href: "/live" },
     { name: "About", href: "/about" },
   ],
   // File upload and data fetching configuration

@@ -11,12 +11,12 @@ export default function DescriptionSection(): React.JSX.Element {
           About PROPTIMUS LIVE
         </h2>
         <p className="text-lg text-gray-700 text-center leading-relaxed mb-8">
-          PROPTIMUS LIVE is a freely available application for the constrained α-carbons optimisation of (but not limited to) ML-predicted protein structures. <br /> It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach.
+          PROPTIMUS LIVE is a freely available application for the local constrained α-carbons optimisation of  protein structures. <br /> It is powered by the GFN-Force-Field, accelerated by a divide-and-conquer RAPHAN approach.
 
         </p>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <Card className="p-6 m-2 transition hover:shadow-lg transition-shadow duration-200 ease-out">
+          <Card className="p-6 m-2 ease-out">
             <h3 className="text-2xl font-semibold text-gray-900 mb-3">How PROPTIMUS LIVE works</h3>
             <div className="pl-1 text-gray-700 space-y-4">
               <div className="flex items-center gap-3">
@@ -47,7 +47,7 @@ export default function DescriptionSection(): React.JSX.Element {
             </div>
           </Card>
 
-          <Card className="p-6 m-2 hover:shadow-lg transition-shadow duration-200 ease-out">
+          <Card className="p-6 m-2 ease-out">
             <h3 className="text-2xl font-semibold text-gray-900 mb-3">Why use PROPTIMUS LIVE</h3>
             <div className="pl-1 text-gray-700 space-y-7">
               <div className="flex items-center gap-3">
@@ -80,7 +80,7 @@ export default function DescriptionSection(): React.JSX.Element {
           <h3 className="text-2xl font-semibold text-gray-900 mb-6 ">Learn more</h3>
           <div className="flex justify-center">
             <a href="https://github.com/sb-ncbr/proptimus_live/wiki" target="_blank" rel="noreferrer">
-              <Card className="p-6 m-2 transition hover:shadow-lg hover:bg-accent transition-shadow duration-200 ease-out cursor-pointer max-w-md">
+              <Card className="p-6 m-2 transition-all duration-300 hover:scale-105 hover:shadow-lg  ease-out cursor-pointer max-w-md">
                 <div className="flex items-center justify-center gap-4">
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-8 w-8 text-primary" />

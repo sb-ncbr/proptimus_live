@@ -34,7 +34,7 @@ const UniprotInputSection: React.FC = () => {
             // Backend now returns { ID, status }
             const jobId = submitJob.data.ID;
             setTimeout(() => {
-                router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
             }, 1500); // 1.5s delay for toast
         }
         if (submitJob.isError) {
@@ -47,13 +47,12 @@ const UniprotInputSection: React.FC = () => {
         }
     }, [submitJob.isSuccess, submitJob.data, submitJob.isError, submitJob.error, router]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if ((!code && !file) || !ph) return;
+    const runOptimisation = async (submitCode: string, submitPh: string, submitFile: File | null) => {
+        if ((!submitCode && !submitFile) || !submitPh) return;
 
         // Check if optimization already exists before submitting
-        if (code && ph && !file) {
-            const jobId = `${code}_${ph}`;
+        if (submitCode && submitPh && !submitFile) {
+            const jobId = `${submitCode}_${submitPh}`;
             setIsChecking(true);
 
             try {
@@ -89,7 +88,7 @@ const UniprotInputSection: React.FC = () => {
                     if (data.status === 'finished') {
                         toast.success("Optimization already complete! Redirecting...");
                         setTimeout(() => {
-                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                            router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
                         }, 1000);
                         setIsChecking(false);
                         return;
@@ -99,7 +98,7 @@ const UniprotInputSection: React.FC = () => {
                     if (data.status === 'running' || data.status === 'queued') {
                         toast.info("Optimization already in progress! Redirecting...");
                         setTimeout(() => {
-                            router.push(`/results?query=${encodeURIComponent(jobId)}`);
+                            router.push(`/live/results?query=${encodeURIComponent(jobId)}`);
                         }, 1000);
                         setIsChecking(false);
                         return;
@@ -112,7 +111,12 @@ const UniprotInputSection: React.FC = () => {
         }
 
         // Submit new job if not already finished
-        submitJob.mutate({ file, code, ph });
+        submitJob.mutate({ file: submitFile, code: submitCode, ph: submitPh });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await runOptimisation(code, ph, file);
     };
 
     const triggerShake = () => {
@@ -226,7 +230,7 @@ const UniprotInputSection: React.FC = () => {
         setCode(exampleCode);
         setPh(examplePh);
         setFile(null);
-        toast.info(`Example loaded: ${exampleCode} at pH ${examplePh}`);
+        runOptimisation(exampleCode, examplePh, null);
     };
 
     return (
@@ -248,9 +252,13 @@ const UniprotInputSection: React.FC = () => {
                             onChange={handleCodeChange}
                             onFocus={handleInputFocus}
                             onBlur={handleInputBlur}
-                            placeholder={file ? "" : "Enter UniProt ID or drop PDB file"}
+                            placeholder={file ? "" : "Enter UniProt, PDB ID or drop PDB file"}
                             className={`text-xl py-6 pl-12 pr-12 ${file ? "bg-gray-100 cursor-not-allowed" : ""}`}
                             disabled={!!file}
+                            spellCheck={false}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
                         />
                         <Search
                             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -272,7 +280,7 @@ const UniprotInputSection: React.FC = () => {
                             onChange={handleFileChange}
                         />
                         {file && (
-                            <div className="absolute left-1/4 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto">
+                            <div className="absolute left-1/4 top-1/2  -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto">
                                 <Badge onRemove={handleRemoveFile}>
                                     {file.name}
                                 </Badge>
@@ -280,7 +288,7 @@ const UniprotInputSection: React.FC = () => {
                         )}
 
                         {/* Suggestions Dropdown */}
-                        {showSuggestions && !file && (
+                        {/* {showSuggestions && !file && (
                             <div className="absolute z-100 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto">
                                 {isLoading ? (
                                     <div className="px-4 py-3 space-y-2">
@@ -306,7 +314,7 @@ const UniprotInputSection: React.FC = () => {
                                     </div>
                                 ) : null}
                             </div>
-                        )}
+                        )} */}
 
                     </div>
                     <div className="w-1/4">
@@ -328,14 +336,14 @@ const UniprotInputSection: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => handleExampleClick("L8BU87", "8.0")}
-                        className="px-4 py-1.5 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 rounded-full text-sm font-semibold border border-blue-200 transition-all duration-200 hover:shadow-md"
+                        className="px-4 py-1.5 bg-gradient-to-r transition-all duration-300 hover:scale-105 from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 rounded-full text-sm font-semibold border border-blue-200 "
                     >
                         UniProt ID L8BU87 • pH 8.0
                     </button>
                     <button
                         type="button"
                         onClick={() => handleExampleClick("P0DL07", "7.0")}
-                        className="px-4 py-1.5 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 transition-all duration-200 hover:shadow-md"
+                        className="px-4 py-1.5 bg-gradient-to-r transition-all duration-300 hover:scale-105 from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 "
                     >
                         UniProt ID P0DL07 • pH 7.0
                     </button>
@@ -343,7 +351,7 @@ const UniprotInputSection: React.FC = () => {
                 <div className="mt-8 flex justify-center">
                     <Button
                         size="xxl"
-                        className="text-lg px-8 py-4"
+                        className="text-lg px-8 py-4 transition-all duration-300 hover:scale-105"
                         type="submit"
                         disabled={submitJob.isPending || isChecking}
                     >

@@ -4,12 +4,12 @@ services:
       context: ./api/proptimus-api
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "5000:80"
     environment:
       - FLASK_ENV=development
       - FLASK_APP=routes.py
       - FLASK_DEBUG=1
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://localhost:80
     volumes:
       - ./api/proptimus-api/app:/app/app:rw
       - ./calculated_structures:/app/app/calculated_structures:rw
@@ -28,7 +28,7 @@ services:
         NEXT_PUBLIC_APP_NAME: "Proptimus"
         NEXT_PUBLIC_API_URL: "http://localhost:5000"
     ports:
-      - "3000:3000"
+      - "3000:80"
     environment:
       - NEXT_PUBLIC_APP_NAME=Proptimus
       - NEXT_PUBLIC_API_URL=http://localhost:5000
