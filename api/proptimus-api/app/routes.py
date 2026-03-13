@@ -259,9 +259,9 @@ def optimise_structures():
             # estimate calculation time
             structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
             num_of_atoms = len(list(structure.get_atoms()))
-            print(num_of_atoms)
-            print(num_of_atoms / 15 + 100)
             estimated_time = num_of_atoms / 15 + 100
+            if not all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
+                estimated_time *= 2
             with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
                 timefile.write(str(time() + estimated_time))
 

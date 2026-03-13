@@ -126,7 +126,7 @@ export default function ProteinShowcase(): React.JSX.Element {
       uniprotId: "Optimisation times for RAPHAN and GFN-FF constrained α-carbons optimisations",
       description: "RAPHAN optimises proteins in minutes.",
       fullDescription:
-        "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises average proteins in a matter of minutes with an average speed of 1000 atoms per minute.",
+        "A lot. While the duration of GFN-Force-Field optimisation with constrained α-carbons grows approximately quadratically with the size of the structure, by dividing the protein into substructures, RAPHAN's calculation speed is linear with respect to the structure's size. Thanks to parallelisation, PROPTIMUS LIVE optimises proteins without ligands at an average speed of 1000 atoms per minute.",
       imageSrc: times,
       documentationHref: "https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full",
     },
