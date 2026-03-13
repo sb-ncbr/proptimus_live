@@ -1,4 +1,4 @@
-[PROPTIMUS LIVE](https://proptimus.ceitec.cz/) is a freely available application for the local optimisation of protein structures with constrained α-carbons. 
+[PROPTIMUS LIVE](https://proptimus.ceitec.cz/live) is a freely available application for the local optimisation of protein structures with constrained α-carbons. 
 It is powered by the [GFN-Force-Field](https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239), accelerated by a divide-and-conquer [RAPHAN](https://www.biorxiv.org/content/10.1101/2025.11.24.690085v1.full) approach. 
 The details about the methodology and usage are described in the [manual](https://github.com/sb-ncbr/proptimus_live/wiki).
 
@@ -23,7 +23,7 @@ cd proptimus_live/ui/proptimus-ui
 bun install  # this step is essential only on the first start
 bun run dev
 ```
-Point your browser to localhost:3000/.
+Point your browser to localhost:3000/live.
 
 ## License
 MIT
