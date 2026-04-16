@@ -335,7 +335,7 @@ class Raphan:
                   initializer=init_worker,
                   initargs=(coordinates, updated_coordinates)) as pool:
             # optimisation
-            for iteration in range(1, 25):
+            for iteration in range(1, 50):
                 bar.update(1)
                 nonconverged_substructures = [(substructure, iteration, "optimisation") for substructure in self.substructures_data if not substructure.converged]
                 iteration_results = pool.starmap(optimise_substructure, nonconverged_substructures, chunksize=((len(nonconverged_substructures) - 1) // self.cpu) + 1)
@@ -357,7 +357,7 @@ class Raphan:
             # final refinement
             for substructure_data in self.substructures_data:
                 substructure_data.converged = False
-            for iteration in range(iteration + 1, iteration + 11):
+            for iteration in range(iteration + 1, iteration + 51):
                 bar.update(1)
                 nonconverged_substructures = [(substructure, iteration, "final refinement") for substructure in self.substructures_data if not substructure.converged]
                 iteration_results = pool.starmap(optimise_substructure, nonconverged_substructures, chunksize=((len(nonconverged_substructures) - 1) // self.cpu) + 1)
