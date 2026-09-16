@@ -248,18 +248,12 @@ def optimise_structures():
                                                       model=1,
                                                       extra_fields=["charge"],
                                                       include_bonds=True)
-                    print("test1")
                     charges = hydride.estimate_amino_acid_charges(molecule, ph=float(ph))
-                    print("test2")
                     molecule.set_annotation("charge", charges)
-                    print("test3")
                     molecule_with_hydrogens, _ = hydride.add_hydrogen(molecule)
-                    print("test4")
                     molecule_with_hydrogens.coord = hydride.relax_hydrogen(molecule_with_hydrogens, iterations=100)
-                    print("test5")
                     strucio.save_structure(file_path=prepared_pdb_file,
                                            array=molecule_with_hydrogens)
-                    print("test6", prepared_pdb_file)
                 pdb_file = prepared_pdb_file
 
             # estimate calculation time
