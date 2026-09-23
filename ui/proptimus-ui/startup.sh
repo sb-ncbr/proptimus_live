@@ -8,11 +8,13 @@ echo "Replacing environment variables in built files..."
 find .next -type f -name "*.js" -exec sed -i \
   -e "s|NEXT_PUBLIC_APP_NAME_PLACEHOLDER|${NEXT_PUBLIC_APP_NAME:-FFFold}|g" \
   -e "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL:-http://localhost:5000}|g" \
+  -e "s|NEXT_PUBLIC_ALPHA_FIND_URL_PLACEHOLDER|${NEXT_PUBLIC_ALPHA_FIND_URL:-https://dev.af2.alphafind.dyn.cloud.e-infra.cz}|g" \
   {} +
 
 echo "Environment variables replaced successfully"
 echo "NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-FFFold}"
 echo "NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}"
+echo "NEXT_PUBLIC_ALPHA_FIND_URL: ${NEXT_PUBLIC_ALPHA_FIND_URL:-https://dev.af2.alphafind.dyn.cloud.e-infra.cz}"
 
 # Start the Next.js server
 exec node server.js

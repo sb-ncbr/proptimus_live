@@ -1,0 +1,27 @@
+PROPTIMUS has been installed.
+
+{{- if .Values.ingress.enabled }}
+
+UI:  https://{{ .Values.ingress.ui.host }}
+API: https://{{ .Values.ingress.api.host }}
+{{- else }}
+
+Ingress is disabled. Access the UI locally with:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "proptimus.fullname" . }}-ui 3000:{{ .Values.ui.service.port }}
+
+Then open http://127.0.0.1:3000.
+{{- end }}
+
+Run the chart smoke test with:
+
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Each submitted calculation runs as a separate Kubernetes Job. List workers with:
+
+  kubectl get jobs -n {{ .Release.Namespace }} \
+    -l app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=worker
+
+The API is intentionally kept at one replica until submission locking supports
+multiple writers. API and worker pods require shared ReadWriteMany storage.
+

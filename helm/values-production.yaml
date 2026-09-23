@@ -1,0 +1,68 @@
+global:
+  # Add the name of a docker-registry Secret here when the GitLab registry
+  # requires authentication.
+  imagePullSecrets: []
+
+api:
+  replicaCount: 1
+  image:
+    tag: latest
+    pullPolicy: Always
+  corsOrigins:
+    - https://proptimus.ceitec.cz
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+worker:
+  image:
+    tag: latest
+    pullPolicy: Always
+  processCount: 60
+  resources:
+    requests:
+      cpu: "60"
+      memory: 32Gi
+    limits:
+      cpu: "60"
+      memory: 64Gi
+
+ui:
+  replicaCount: 1
+  image:
+    tag: latest
+    pullPolicy: Always
+  appName: Proptimus
+  publicApiUrl: https://api.proptimus.biodata.ceitec.cz
+  alphaFindUrl: https://dev.af2.alphafind.dyn.cloud.e-infra.cz
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteMany
+  size: 100Gi
+  retain: true
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  ui:
+    host: proptimus.ceitec.cz
+    tls:
+      enabled: true
+      secretName: proptimus-ceitec-cz-tls
+  api:
+    host: api.proptimus.biodata.ceitec.cz
+    tls:
+      enabled: true
+      secretName: api-proptimus-biodata-ceitec-cz-tls
+
+podDisruptionBudget:
+  ui:
+    enabled: false

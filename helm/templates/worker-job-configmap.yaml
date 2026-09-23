@@ -1,0 +1,77 @@
+{{- $workerLabels := dict
+      "app.kubernetes.io/name" (include "proptimus.name" .)
+      "app.kubernetes.io/instance" .Release.Name
+      "app.kubernetes.io/component" "worker" -}}
+{{- $podLabels := merge (deepCopy $workerLabels) .Values.worker.podLabels -}}
+{{- $workerEnv := list
+      (dict "name" "PROPTIMUS_EXECUTION_MODE" "value" "worker")
+      (dict "name" "PROPTIMUS_WORKER_PROCESSES" "value" (.Values.worker.processCount | toString)) -}}
+{{- range $entry := .Values.worker.extraEnv -}}
+{{- $workerEnv = append $workerEnv $entry -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "proptimus.fullname" . }}-worker-job
+  labels:
+    {{- include "proptimus.labels" (dict "root" . "component" "worker") | nindent 4 }}
+data:
+  worker-job.json: |
+    {
+      "apiVersion": "batch/v1",
+      "kind": "Job",
+      "metadata": {
+        "generateName": {{ include "proptimus.workerJobGenerateName" . | quote }},
+        "labels": {{ $workerLabels | toJson }}
+      },
+      "spec": {
+        "backoffLimit": {{ .Values.worker.backoffLimit }},
+        "ttlSecondsAfterFinished": {{ .Values.worker.ttlSecondsAfterFinished }},
+        "activeDeadlineSeconds": {{ .Values.worker.activeDeadlineSeconds }},
+        "template": {
+          "metadata": {
+            "annotations": {{ .Values.worker.podAnnotations | toJson }},
+            "labels": {{ $podLabels | toJson }}
+          },
+          "spec": {
+            "restartPolicy": "Never",
+            "serviceAccountName": {{ include "proptimus.serviceAccountName" (dict "root" . "component" "worker") | quote }},
+            "automountServiceAccountToken": {{ .Values.serviceAccounts.worker.automountServiceAccountToken }},
+            "imagePullSecrets": {{ .Values.global.imagePullSecrets | toJson }},
+            "securityContext": {{ .Values.worker.podSecurityContext | toJson }},
+            "terminationGracePeriodSeconds": {{ .Values.worker.terminationGracePeriodSeconds }},
+            "containers": [
+              {
+                "name": "worker",
+                "image": {{ include "proptimus.image" (dict "root" . "image" .Values.worker.image) | quote }},
+                "imagePullPolicy": {{ .Values.worker.image.pullPolicy | quote }},
+                "securityContext": {{ .Values.worker.containerSecurityContext | toJson }},
+                "command": ["python", "-m", "app.worker"],
+                "args": ["__PROPTIMUS_JOB_ID__"],
+                "env": {{ $workerEnv | toJson }},
+                "resources": {{ .Values.worker.resources | toJson }},
+                "volumeMounts": [
+                  {
+                    "name": "calculated-structures",
+                    "mountPath": "/app/app/calculated_structures"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "calculated-structures",
+                "persistentVolumeClaim": {
+                  "claimName": {{ default (include "proptimus.apiPvcName" .) .Values.persistence.existingClaim | quote }}
+                }
+              }
+            ],
+            "nodeSelector": {{ .Values.worker.nodeSelector | toJson }},
+            "affinity": {{ .Values.worker.affinity | toJson }},
+            "tolerations": {{ .Values.worker.tolerations | toJson }}
+          }
+        }
+      }
+    }
+
+

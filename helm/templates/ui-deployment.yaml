@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "proptimus.fullname" . }}-ui
+  labels:
+    {{- include "proptimus.labels" (dict "root" . "component" "ui") | nindent 4 }}
+spec:
+  replicas: {{ .Values.ui.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "proptimus.selectorLabels" (dict "root" . "component" "ui") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "proptimus.selectorLabels" (dict "root" . "component" "ui") | nindent 8 }}
+        {{- with .Values.ui.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.ui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "proptimus.serviceAccountName" (dict "root" . "component" "ui") }}
+      automountServiceAccountToken: {{ .Values.serviceAccounts.ui.automountServiceAccountToken }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.ui.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.ui.terminationGracePeriodSeconds }}
+      containers:
+        - name: ui
+          image: {{ include "proptimus.image" (dict "root" . "image" .Values.ui.image) | quote }}
+          imagePullPolicy: {{ .Values.ui.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.ui.containerSecurityContext | nindent 12 }}
+          env:
+            - name: NEXT_PUBLIC_APP_NAME
+              value: {{ .Values.ui.appName | quote }}
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.ui.publicApiUrl | quote }}
+            - name: NEXT_PUBLIC_ALPHA_FIND_URL
+              value: {{ .Values.ui.alphaFindUrl | quote }}
+            {{- with .Values.ui.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          {{- if .Values.ui.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            failureThreshold: {{ .Values.ui.startupProbe.failureThreshold }}
+            periodSeconds: {{ .Values.ui.startupProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.ui.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.ui.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ui.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.ui.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.ui.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.ui.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.ui.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.ui.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.ui.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.ui.livenessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+      {{- with .Values.ui.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ui.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ui.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

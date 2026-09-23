@@ -49,15 +49,20 @@ WORKDIR /app
 
 # Create calculated_structures directory
 RUN mkdir -p app/calculated_structures && \
-    chmod 777 app/calculated_structures
+    groupadd --gid 1000 proptimus && \
+    useradd --uid 1000 --gid 1000 --create-home proptimus && \
+    chown -R proptimus:proptimus /app
 
 # Environment variables
-ENV FLASK_APP=routes.py
+ENV FLASK_APP=app.routes:application
 ENV PYTHONUNBUFFERED=1
 ENV XTB_PATH=/opt/miniconda3/bin/xtb
 ENV OBABEL_PATH=/opt/miniconda3/bin/obabel
+ENV PROPTIMUS_EXECUTION_MODE=local
 
 EXPOSE 80
 
-# Run Flask app
-CMD ["flask", "--app", "app.routes:application", "run", "--host=0.0.0.0", "--port=80"]
+# The same image is used by the API Deployment and on-demand worker Jobs.
+# Worker Jobs override this command with: python -m app.worker <job-id>
+USER 1000:1000
+CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:80", "app.routes:application"]

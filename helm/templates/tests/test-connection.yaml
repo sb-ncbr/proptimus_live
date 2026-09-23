@@ -1,0 +1,36 @@
+{{- if .Values.tests.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "proptimus.fullname" . }}-test-connection
+  labels:
+    {{- include "proptimus.labels" (dict "root" . "component" "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: curl
+      image: "{{ .Values.tests.image.repository }}:{{ .Values.tests.image.tag }}"
+      imagePullPolicy: {{ .Values.tests.image.pullPolicy }}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        runAsNonRoot: true
+      command:
+        - sh
+        - -ec
+        - >-
+          curl --fail --silent --show-error
+          http://{{ include "proptimus.fullname" . }}-api:{{ .Values.api.service.port }}/ >/dev/null;
+          curl --fail --silent --show-error
+          http://{{ include "proptimus.fullname" . }}-ui:{{ .Values.ui.service.port }}/ >/dev/null
+{{- end }}
+

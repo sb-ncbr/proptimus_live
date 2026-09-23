@@ -1,0 +1,35 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "proptimus.fullname" . }}-ui
+  labels:
+    {{- include "proptimus.labels" (dict "root" . "component" "ui") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.ui.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.ui.host | quote }}
+      secretName: {{ .Values.ingress.ui.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.ui.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.ui.path }}
+            pathType: {{ .Values.ingress.ui.pathType }}
+            backend:
+              service:
+                name: {{ include "proptimus.fullname" . }}-ui
+                port:
+                  number: {{ .Values.ui.service.port }}
+{{- end }}
+
+

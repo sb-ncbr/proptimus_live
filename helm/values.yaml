@@ -1,0 +1,222 @@
+global:
+  imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccounts:
+  api:
+    create: true
+    automountServiceAccountToken: true
+    annotations: {}
+    name: ""
+  ui:
+    create: true
+    automountServiceAccountToken: false
+    annotations: {}
+    name: ""
+  worker:
+    create: true
+    automountServiceAccountToken: false
+    annotations: {}
+    name: ""
+
+rbac:
+  create: true
+
+api:
+  replicaCount: 1
+  image:
+    repository: registry.gitlab.ics.muni.cz:443/ceitec-cf-biodata/proptimus/api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    annotations: {}
+  corsOrigins:
+    - https://proptimus.example.org
+  maxUploadBytes: 52428800
+  extraEnv: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  startupProbe:
+    enabled: true
+    failureThreshold: 30
+    periodSeconds: 10
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  terminationGracePeriodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+worker:
+  image:
+    # The API image contains the scientific stack and supports the worker
+    # entrypoint. This can be replaced by a dedicated worker image later.
+    repository: registry.gitlab.ics.muni.cz:443/ceitec-cf-biodata/proptimus/api
+    tag: latest
+    pullPolicy: IfNotPresent
+  processCount: 8
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  activeDeadlineSeconds: 86400
+  extraEnv: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: "8"
+      memory: 16Gi
+    limits:
+      cpu: "8"
+      memory: 32Gi
+  terminationGracePeriodSeconds: 120
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+ui:
+  replicaCount: 1
+  image:
+    repository: registry.gitlab.ics.muni.cz:443/ceitec-cf-biodata/proptimus/ui
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    annotations: {}
+  appName: Proptimus
+  publicApiUrl: https://api.proptimus.example.org
+  alphaFindUrl: https://dev.af2.alphafind.dyn.cloud.e-infra.cz
+  extraEnv: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext:
+    fsGroup: 1001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  startupProbe:
+    enabled: true
+    failureThreshold: 30
+    periodSeconds: 5
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 3
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    timeoutSeconds: 3
+    failureThreshold: 3
+  terminationGracePeriodSeconds: 30
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteMany
+  size: 100Gi
+  annotations: {}
+  retain: true
+
+ingress:
+  enabled: false
+  className: traefik
+  annotations: {}
+  ui:
+    host: proptimus.example.org
+    path: /
+    pathType: Prefix
+    tls:
+      enabled: true
+      secretName: proptimus-ui-tls
+  api:
+    host: api.proptimus.example.org
+    path: /
+    pathType: Prefix
+    tls:
+      enabled: true
+      secretName: proptimus-api-tls
+
+podDisruptionBudget:
+  api:
+    enabled: false
+    minAvailable: 1
+  ui:
+    enabled: false
+    minAvailable: 1
+
+tests:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    tag: 8.12.1
+    pullPolicy: IfNotPresent

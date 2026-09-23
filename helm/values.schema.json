@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "PROPTIMUS Helm values",
+  "type": "object",
+  "required": [
+    "global",
+    "serviceAccounts",
+    "rbac",
+    "api",
+    "worker",
+    "ui",
+    "persistence",
+    "ingress",
+    "podDisruptionBudget",
+    "tests"
+  ],
+  "properties": {
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "global": {
+      "type": "object",
+      "required": ["imagePullSecrets"],
+      "properties": {
+        "imagePullSecrets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "serviceAccounts": {
+      "type": "object",
+      "required": ["api", "ui", "worker"],
+      "properties": {
+        "api": {"$ref": "#/definitions/serviceAccount"},
+        "ui": {"$ref": "#/definitions/serviceAccount"},
+        "worker": {"$ref": "#/definitions/serviceAccount"}
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "required": ["create"],
+      "properties": {
+        "create": {"type": "boolean"}
+      }
+    },
+    "api": {
+      "type": "object",
+      "required": ["replicaCount", "image", "service", "corsOrigins", "maxUploadBytes"],
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "const": 1,
+          "description": "The chart currently supports one API writer for each shared result volume."
+        },
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "service": {
+          "$ref": "#/definitions/service"
+        },
+        "corsOrigins": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^https?://"
+          }
+        },
+        "maxUploadBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "extraEnv": {
+          "$ref": "#/definitions/envList"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "required": [
+        "image",
+        "processCount",
+        "backoffLimit",
+        "ttlSecondsAfterFinished",
+        "activeDeadlineSeconds",
+        "extraEnv"
+      ],
+      "properties": {
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "processCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "backoffLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ttlSecondsAfterFinished": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeDeadlineSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "extraEnv": {
+          "$ref": "#/definitions/envList"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "required": [
+        "replicaCount",
+        "image",
+        "service",
+        "appName",
+        "publicApiUrl",
+        "alphaFindUrl"
+      ],
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "service": {
+          "$ref": "#/definitions/service"
+        },
+        "appName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publicApiUrl": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "alphaFindUrl": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "extraEnv": {
+          "$ref": "#/definitions/envList"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "existingClaim",
+        "storageClass",
+        "accessModes",
+        "size",
+        "retain"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "const": true,
+          "description": "API and worker pods require a shared persistent volume."
+        },
+        "existingClaim": {
+          "type": "string"
+        },
+        "storageClass": {
+          "type": "string"
+        },
+        "accessModes": {
+          "type": "array",
+          "minItems": 1,
+          "contains": {
+            "const": "ReadWriteMany"
+          },
+          "items": {
+            "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany", "ReadWriteOncePod"]
+          }
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?([EPTGMK]i?|[eptgmk])$"
+        },
+        "retain": {
+          "type": "boolean"
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "required": ["enabled", "className", "ui", "api"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "ui": {
+          "$ref": "#/definitions/ingressEndpoint"
+        },
+        "api": {
+          "$ref": "#/definitions/ingressEndpoint"
+        }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "required": ["enabled", "image"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "image": {
+          "$ref": "#/definitions/image"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "serviceAccount": {
+      "type": "object",
+      "required": ["create", "automountServiceAccountToken", "name"],
+      "properties": {
+        "create": {
+          "type": "boolean"
+        },
+        "automountServiceAccountToken": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag", "pullPolicy"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "required": ["type", "port"],
+      "properties": {
+        "type": {
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
+    "envList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "anyOf": [
+          {
+            "required": ["value"]
+          },
+          {
+            "required": ["valueFrom"]
+          }
+        ]
+      }
+    },
+    "ingressEndpoint": {
+      "type": "object",
+      "required": ["host", "path", "pathType", "tls"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "pathType": {
+          "enum": ["Exact", "Prefix", "ImplementationSpecific"]
+        },
+        "tls": {
+          "type": "object",
+          "required": ["enabled", "secretName"],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "secretName": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,17 +17,20 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build-time environment variables
-ARG NEXT_PUBLIC_APP_NAME
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_NAME=NEXT_PUBLIC_APP_NAME_PLACEHOLDER
+ARG NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL_PLACEHOLDER
+ARG NEXT_PUBLIC_ALPHA_FIND_URL=NEXT_PUBLIC_ALPHA_FIND_URL_PLACEHOLDER
 
 # Set environment variables for build
 ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_ALPHA_FIND_URL=$NEXT_PUBLIC_ALPHA_FIND_URL
 
 # Debug: Show environment variables before build
 RUN echo "=== BUILD ENVIRONMENT VARIABLES ===" && \
     echo "NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL" && \
     echo "NEXT_PUBLIC_APP_NAME: $NEXT_PUBLIC_APP_NAME" && \
+    echo "NEXT_PUBLIC_ALPHA_FIND_URL: $NEXT_PUBLIC_ALPHA_FIND_URL" && \
     echo "=== END BUILD ENV VARS ==="
 
 # Limit Node.js memory to trigger GC earlier instead of getting OOM-killed
@@ -45,9 +48,12 @@ RUN addgroup -g 1001 -S nodejs \
 COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
 COPY --chown=nextjs:nodejs --from=builder /app/public ./public
 COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
+COPY --chown=nextjs:nodejs startup.sh ./startup.sh
 
 # Create .next directory with proper permissions for cache
-RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next
+RUN mkdir -p .next/cache && \
+    chown -R nextjs:nodejs .next && \
+    chmod +x ./startup.sh
 
 EXPOSE 80
 
@@ -57,7 +63,8 @@ ENV PORT=80
 # Runtime environment variables with placeholders
 ENV NEXT_PUBLIC_APP_NAME="NEXT_PUBLIC_APP_NAME_PLACEHOLDER"
 ENV NEXT_PUBLIC_API_URL="NEXT_PUBLIC_API_URL_PLACEHOLDER"
+ENV NEXT_PUBLIC_ALPHA_FIND_URL="NEXT_PUBLIC_ALPHA_FIND_URL_PLACEHOLDER"
 
 USER nextjs
 
-CMD ["node", "server.js"]
+CMD ["./startup.sh"]

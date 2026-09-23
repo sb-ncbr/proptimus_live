@@ -1,5 +1,8 @@
 import json
+import math
 import os
+import re
+import subprocess
 import uuid
 import zipfile
 from collections import defaultdict
@@ -11,17 +14,14 @@ from random import random
 from time import time
 import traceback
 
-import hydride
-import biotite.structure as struc
-import biotite.structure.io as strucio
 import requests
-from Bio.PDB import PDBParser, NeighborSearch, Polypeptide
+from Bio.PDB import PDBParser
 from flask import jsonify, request, send_from_directory, redirect, url_for, Response, Flask
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from app.prime import PrimaryIntegrityMeasuresTaker
-from app.raphan import Raphan
+from app.job_state import read_job_state, write_job_state
+from app.kubernetes_jobs import get_job_failure, submit_job
 
 application = Flask(__name__)
 application.wsgi_app = ProxyFix(application.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -41,13 +41,55 @@ CORS(application, resources={r"/*": cors_config})
 application.jinja_env.trim_blocks = True
 application.jinja_env.lstrip_blocks = True
 application.config['SECRET_KEY'] = str(random())
+application.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_UPLOAD_BYTES', 50 * 1024 * 1024))
 
 root_dir = os.path.dirname(os.path.abspath(__file__))
-queue = Manager().list()
-running = Manager().list()
+execution_mode = os.environ.get("PROPTIMUS_EXECUTION_MODE", "local").lower()
+if execution_mode not in {"local", "kubernetes", "worker"}:
+    raise RuntimeError(f"Unsupported PROPTIMUS_EXECUTION_MODE: {execution_mode}")
+
+if execution_mode == "local":
+    process_manager = Manager()
+    queue = process_manager.list()
+    running = process_manager.list()
+else:
+    queue = []
+    running = []
 optimisers = []
-number_of_processes = 1
-number_of_cpu = 60
+number_of_processes = max(1, int(os.environ.get("PROPTIMUS_LOCAL_OPTIMISERS", "1")))
+number_of_cpu = max(1, int(os.environ.get("PROPTIMUS_WORKER_PROCESSES", "60")))
+code_pattern = re.compile(r"^[A-Za-z0-9]{4,30}$")
+
+
+def normalise_ph(raw_ph: str | None) -> str:
+    try:
+        ph_value = float(raw_ph)
+    except (TypeError, ValueError):
+        raise ValueError("pH must be a number between 0 and 14.")
+    if not math.isfinite(ph_value) or not 0 <= ph_value <= 14:
+        raise ValueError("pH must be a number between 0 and 14.")
+    normalised = f"{ph_value:.3f}".rstrip("0").rstrip(".")
+    return normalised if "." in normalised else f"{normalised}.0"
+
+
+def normalise_code(raw_code: str | None) -> str:
+    code = (raw_code or "").strip().upper()
+    if not code_pattern.fullmatch(code):
+        raise ValueError("Use a four-character PDB ID or a short alphanumeric UniProt accession.")
+    return code
+
+
+def normalise_job_id(raw_id: str | None) -> str:
+    try:
+        raw_code, raw_ph = (raw_id or "").rsplit("_", 1)
+    except ValueError:
+        raise ValueError("The job ID must have the form <structure>_<pH>.")
+
+    try:
+        code = str(uuid.UUID(raw_code))
+    except ValueError:
+        code = normalise_code(raw_code)
+    return f"{code}_{normalise_ph(raw_ph)}".upper()
 
 
 def residue_id(biotite_structure, atom_index):
@@ -67,6 +109,10 @@ def write_additional_info(original_PDB_file,
                           optimised_PDB_file,
                           unconverged_residues_ids,
                           data_dir):
+    import biotite.structure as struc
+    import biotite.structure.io as strucio
+    from Bio.PDB import NeighborSearch
+
     # interresidual interactions
     sum_interactions = {}
     interactions = {}
@@ -204,115 +250,183 @@ def write_additional_info(original_PDB_file,
                   indent = 4)
 
 
+def optimise_structure(ID: str, track_running: bool = False):
+    """Run one optimisation in the current process.
+
+    Kubernetes workers call this function directly. The local development mode
+    wraps it with the historical in-process queue.
+    """
+    ID = normalise_job_id(ID)
+    import hydride
+    import biotite.structure.io as strucio
+    from Bio.PDB import Polypeptide
+    from app.prime import PrimaryIntegrityMeasuresTaker
+    from app.raphan import Raphan
+
+    data_dir = f'{root_dir}/calculated_structures/{ID}'
+    if track_running:
+        running.append(ID)
+    Path(f"{data_dir}/failed.txt").unlink(missing_ok=True)
+    write_job_state(data_dir, "running", worker=os.environ.get("HOSTNAME", "local"))
+
+    try:
+        code, ph = ID.rsplit('_', 1)
+        ph = normalise_ph(ph)
+        pdb_file = f'{data_dir}/original.pdb'
+        prepared_pdb_file = f'{data_dir}/prepared.pdb'
+        optimised_pdb_file = f'{data_dir}/optimised.pdb'
+
+        # get original pdb header
+        with open(pdb_file, "r") as f:
+            original_pdb_header = ""
+            for line in f.readlines():
+                fields = line.split()
+                if fields and fields[0] in ["ATOM", "HETATM"]:
+                    break
+                original_pdb_header += line
+
+        structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
+        if all(atom.element != "H" for atom in structure.get_atoms()):
+
+            # if structure is downloaded from AlphaFold DB, correct it first
+            if 4 < len(code) < 30:
+                try:
+                    PrimaryIntegrityMeasuresTaker(Path(pdb_file),
+                                                  json_logs_dir=Path(f"{data_dir}")).process_structure()
+                    if Path(f"{data_dir}/correction_sicc_af").exists():
+                        pdb_file = glob(f"{data_dir}/correction_sicc_af/original_corrected.pdb")[0]
+                except KeyError:
+                    pass
+
+            # if structure contain only standard aminoacids, pdb2pqr can be used
+            if all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
+                with open(f'{data_dir}/propka.log', 'w') as propka_log:
+                    subprocess.run(
+                        [
+                            'pdb2pqr30',
+                            '--titration-state-method', 'propka',
+                            '--with-ph', ph,
+                            '--pdb-output', prepared_pdb_file,
+                            pdb_file,
+                            f'{data_dir}/{code}.pqr',
+                        ],
+                        stdout=propka_log,
+                        stderr=subprocess.STDOUT,
+                        check=True,
+                    )
+
+            # if structure contain heteroresidues, less accurate but more universal hydride is used
+            else:
+                molecule = strucio.load_structure(file_path=pdb_file,
+                                                  model=1,
+                                                  extra_fields=["charge"],
+                                                  include_bonds=True)
+                charges = hydride.estimate_amino_acid_charges(molecule, ph=float(ph))
+                molecule.set_annotation("charge", charges)
+                molecule_with_hydrogens, _ = hydride.add_hydrogen(molecule)
+                molecule_with_hydrogens.coord = hydride.relax_hydrogen(molecule_with_hydrogens, iterations=100)
+                strucio.save_structure(file_path=prepared_pdb_file,
+                                       array=molecule_with_hydrogens)
+            pdb_file = prepared_pdb_file
+
+        # estimate calculation time
+        structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
+        num_of_atoms = len(list(structure.get_atoms()))
+        estimated_time = num_of_atoms / 10 + 100
+        if not all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
+            estimated_time *= 2
+        with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
+            timefile.write(str(time() + estimated_time))
+
+        # optimise structure
+        raphan = Raphan(data_dir=data_dir,
+                        PDB_file=pdb_file,
+                        cpu=number_of_cpu,
+                        delete_auxiliary_files=True)
+        raphan.optimise()
+
+        write_additional_info(original_PDB_file=pdb_file,
+                              optimised_PDB_file=optimised_pdb_file,
+                              unconverged_residues_ids=raphan.unconverged_residues_ids,
+                              data_dir=data_dir)
+
+        # add header back because of Mol*
+        optimised_pdb_str = original_pdb_header
+        with open(optimised_pdb_file, "r") as f:
+            for line in f.readlines():
+                optimised_pdb_str += line
+        with open(optimised_pdb_file, "w") as f:
+            f.write(optimised_pdb_str)
+
+        write_job_state(data_dir, "finished")
+    except Exception as error:
+        failure_traceback = traceback.format_exc()
+        print(f"Optimisation failed: {error}")
+        with open(f"{data_dir}/failed.txt", 'w') as f:
+            f.write(failure_traceback)
+        write_job_state(data_dir, "error", message=str(error))
+        raise
+    finally:
+        if track_running and ID in running:
+            running.remove(ID)
+
+
 def optimise_structures():
     while len(queue):
+        ID = queue.pop(0).upper()
         try:
-            ID = queue.pop(0).upper()
-            running.append(ID)
-            code, ph = ID.split('_')
-            data_dir = f'{root_dir}/calculated_structures/{ID}'
-            pdb_file = f'{data_dir}/original.pdb'
-            prepared_pdb_file = f'{data_dir}/prepared.pdb'
-            optimised_pdb_file = f'{data_dir}/optimised.pdb'
-
-            # get original pdb header
-            with open(pdb_file, "r") as f:
-                original_pdb_header = ""
-                for line in f.readlines():
-                    if line.split()[0] in ["ATOM", "HETATM"]:
-                        break
-                    original_pdb_header += line
-
-            structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
-            if all(atom.element != "H" for atom in structure.get_atoms()):
-
-                # if structure is downloaded from AlphaFold DB, correct it first
-                if 4 < len(code) < 30:
-                    try:
-                        PrimaryIntegrityMeasuresTaker(Path(pdb_file),
-                                                      json_logs_dir=Path(f"{data_dir}")).process_structure()
-                        if Path(f"{data_dir}/correction_sicc_af").exists():
-                            pdb_file = glob(f"{data_dir}/correction_sicc_af/original_corrected.pdb")[0]
-                    except KeyError:
-                        pass
-
-                # if structure contain only standard aminoacids, pdb2pqr can be used
-                if all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
-                    os.system(f'pdb2pqr30 --titration-state-method propka '
-                              f'--with-ph {ph} --pdb-output {prepared_pdb_file} {pdb_file} '
-                              f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
-
-                # if structure contain heteroresidues, less accurate but more universal hydride is used
-                else:
-                    molecule = strucio.load_structure(file_path=pdb_file,
-                                                      model=1,
-                                                      extra_fields=["charge"],
-                                                      include_bonds=True)
-                    charges = hydride.estimate_amino_acid_charges(molecule, ph=float(ph))
-                    molecule.set_annotation("charge", charges)
-                    molecule_with_hydrogens, _ = hydride.add_hydrogen(molecule)
-                    molecule_with_hydrogens.coord = hydride.relax_hydrogen(molecule_with_hydrogens, iterations=100)
-                    strucio.save_structure(file_path=prepared_pdb_file,
-                                           array=molecule_with_hydrogens)
-                pdb_file = prepared_pdb_file
-
-            # estimate calculation time
-            structure = PDBParser(QUIET=True).get_structure(id="structure", file=pdb_file)[0]
-            num_of_atoms = len(list(structure.get_atoms()))
-            estimated_time = num_of_atoms / 10 + 100
-            if not all(Polypeptide.is_aa(res.resname, standard=True) for res in structure.get_residues()):
-                estimated_time *= 2
-            with open(f"{data_dir}/estimated_time.txt", 'w') as timefile:
-                timefile.write(str(time() + estimated_time))
-
-            # optimise structure
-            raphan = Raphan(data_dir=data_dir,
-                            PDB_file=pdb_file,
-                            cpu=number_of_cpu,
-                            delete_auxiliary_files=True)
-            raphan.optimise()
-
-            write_additional_info(original_PDB_file=pdb_file,
-                                  optimised_PDB_file=optimised_pdb_file,
-                                  unconverged_residues_ids=raphan.unconverged_residues_ids,
-                                  data_dir=data_dir)
-
-            # add header back because of Mol*
-            optimised_pdb_str = original_pdb_header
-            with open(optimised_pdb_file, "r") as f:
-                for line in f.readlines():
-                    optimised_pdb_str += line
-            with open(optimised_pdb_file, "w") as f:
-                f.write(optimised_pdb_str)
-        except Exception as e:
-            print(f"Optimisation failed: {e}")
-            with open(f"{data_dir}/failed.txt", 'w') as f:
-                f.write(traceback.format_exc())
-        finally:
-            running.remove(ID)
+            optimise_structure(ID, track_running=True)
+        except Exception:
+            # The failure is persisted by optimise_structure(). Continue with
+            # the next local-development job instead of terminating the queue.
+            continue
 
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
     if request.method == 'POST':
-        ph = request.form.get('ph')
+        try:
+            ph = normalise_ph(request.form.get('ph'))
+        except ValueError as error:
+            return jsonify({"status": "not applicable", "message": str(error)}), 406
 
         # if file was uploaded
         if 'file' in request.files and request.files['file'].filename:
             # get calculation data
-            code = uuid.uuid4()
-            pdb_str = request.files['file'].read().decode('utf-8')
+            code = str(uuid.uuid4())
+            try:
+                pdb_str = request.files['file'].read().decode('utf-8')
+            except UnicodeDecodeError:
+                return jsonify({"status": "not applicable",
+                                "message": "The uploaded PDB file must be UTF-8 text."}), 406
 
         else:
-            code = request.form.get('code', '').strip()
-            if len(code) == 4: # structure from PDB
-                pdb_str = requests.get(f'https://files.rcsb.org/download/{code}.pdb').text
-            else:
-                pdb_str = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb').text
+            try:
+                code = normalise_code(request.form.get('code'))
+            except ValueError as error:
+                return jsonify({"status": "not applicable", "message": str(error)}), 406
 
-        # create data dir and save pdb file
         ID = f'{code}_{ph}'.upper()
         data_dir = f'{root_dir}/calculated_structures/{ID}'
+        existing_state = read_job_state(data_dir)
+        if (Path(data_dir) / "optimised.pdb").exists() and (Path(data_dir) / "tables.json").exists():
+            return jsonify({"ID": ID, "status": "finished"}), 200
+        if existing_state.get("status") in {"queued", "running"}:
+            return jsonify({"ID": ID, "status": existing_state["status"]}), 200
+
+        if 'file' not in request.files or not request.files['file'].filename:
+            try:
+                if len(code) == 4: # structure from PDB
+                    response = requests.get(f'https://files.rcsb.org/download/{code}.pdb', timeout=(5, 30))
+                else:
+                    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb', timeout=(5, 30))
+                response.raise_for_status()
+                pdb_str = response.text
+            except requests.RequestException:
+                return jsonify({"status": "not applicable",
+                                "message": f"No structure could be downloaded for {code}."}), 406
+
+        # create data dir and save pdb file
         os.makedirs(data_dir, exist_ok=True)
         with open(f'{data_dir}/original.pdb', 'w') as pdb:
             pdb.write(pdb_str)
@@ -323,34 +437,59 @@ def main_site():
 
         # validate PDB file
         try:
-            PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
-        except:
+            structure = PDBParser(QUIET=True).get_structure("structure", f'{data_dir}/original.pdb')
+            if next(structure.get_atoms(), None) is None:
+                raise ValueError("PDB file has no atoms")
+        except Exception:
             return jsonify({"status": "not applicable",
                             "message": "The uploaded PDB file is not valid."}), 406
 
-        # create and submit job (common for both paths)
-        global optimisers
-        optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
-        queue.append(ID)
-        if len(optimisers) < number_of_processes:
-            optimiser = Process(target=optimise_structures)
-            optimiser.start()
-            optimisers.append(optimiser)
+        Path(f"{data_dir}/failed.txt").unlink(missing_ok=True)
+        write_job_state(data_dir, "queued", message="", worker="")
+
+        if execution_mode == "kubernetes":
+            try:
+                kubernetes_job = submit_job(ID)
+                # The pod may start before the create call returns. Merge the
+                # Job name without overwriting a worker-written state.
+                write_job_state(data_dir, None, kubernetes_job=kubernetes_job)
+            except Exception:
+                failure_traceback = traceback.format_exc()
+                with open(f"{data_dir}/failed.txt", 'w') as failed_file:
+                    failed_file.write(failure_traceback)
+                write_job_state(data_dir, "error", message="The worker Job could not be created.")
+                application.logger.exception("Kubernetes Job submission failed")
+                return jsonify({"status": "error",
+                                "message": "The worker Job could not be created."}), 503
+        elif execution_mode == "local":
+            # Local development fallback using the historical process queue.
+            global optimisers
+            optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
+            queue.append(ID)
+            if len(optimisers) < number_of_processes:
+                optimiser = Process(target=optimise_structures)
+                optimiser.start()
+                optimisers.append(optimiser)
+        else:
+            return jsonify({"status": "error",
+                            "message": "This container is configured as a computation worker."}), 503
         
         return jsonify({"ID": ID, "status": "submitted"}), 200
 
-    return jsonify({"running": len(running),
-                    "queued": len(queue),
+    job_states = [read_job_state(path).get("status")
+                  for path in Path(f'{root_dir}/calculated_structures').glob('*_*')
+                  if path.is_dir()]
+    return jsonify({"running": job_states.count("running"),
+                    "queued": job_states.count("queued"),
                     "calculated": len(glob(f'{root_dir}/calculated_structures/*_*/optimised.pdb'))})
 
 
 @application.route('/results')
 def results():
-    ID = request.args.get('ID')
-
     try:
+        ID = normalise_job_id(request.args.get('ID'))
         code, ph = ID.split('_')
-    except:
+    except (ValueError, AttributeError):
         return redirect(url_for('main_site'))
 
     data_dir = f'{root_dir}/calculated_structures/{ID.upper()}'
@@ -374,11 +513,12 @@ def results():
 
 @application.route('/api/available_results', methods=['GET'])
 def available_results():
-    ID = request.args.get('ID').upper()
-    if Path(f"{root_dir}/calculated_structures/{ID}").exists():
-        available = True
-    else:
-        available = False
+    try:
+        ID = normalise_job_id(request.args.get('ID'))
+    except ValueError:
+        return jsonify({"available": False})
+    data_dir = Path(root_dir) / "calculated_structures" / ID
+    available = (data_dir / "optimised.pdb").is_file() and (data_dir / "tables.json").is_file()
     return jsonify({"available": available})
 
 
@@ -387,27 +527,54 @@ def available_results():
 @application.route('/api/running_progress', methods=['GET'])
 def running_progress():
 
-    ID = request.args.get('ID').upper()
+    try:
+        ID = normalise_job_id(request.args.get('ID'))
+    except ValueError as error:
+        return jsonify({"status": "not applicable",
+                        "message": str(error),
+                        "url": "",
+                        "remaining_time": ""}), 406
     remaining_time = ""
     message = ""
     url = ""
     status = ""
+    data_dir = Path(f"{root_dir}/calculated_structures/{ID}")
+    persisted_state = read_job_state(data_dir)
 
-    if Path(f"{root_dir}/calculated_structures/{ID}/failed.txt").exists():
-        status = "running"
-        remaining_time = f"∞ (Optimization failed. Please contact us and provide the ID={ID} so we can fix this issue."
+    if persisted_state.get("status") == "error" or (data_dir / "failed.txt").exists():
+        status = "error"
+        message = persisted_state.get("message") or f"Optimization failed for ID={ID}."
 
     # check status
-    elif os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimised.pdb') and os.path.isfile(f'{root_dir}/calculated_structures/{ID}/tables.json'):
+    elif (data_dir / "optimised.pdb").is_file() and (data_dir / "tables.json").is_file():
         status = "finished"
         url = url_for('results', ID=ID)
-    elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
-        if ID in queue:
-            status = "queued"
-        elif ID in running:
-            status = "running"
+    elif data_dir.is_dir():
+        status = persisted_state.get("status", "")
+        if not status:
+            if ID in queue:
+                status = "queued"
+            elif ID in running:
+                status = "running"
+            else:
+                status = "queued"
+
+        if status in {"queued", "running"} and execution_mode == "kubernetes":
+            kubernetes_job = persisted_state.get("kubernetes_job")
+            if kubernetes_job:
+                try:
+                    failure_message = get_job_failure(kubernetes_job)
+                except Exception:
+                    application.logger.exception("Could not query Kubernetes Job %s", kubernetes_job)
+                    failure_message = None
+                if failure_message:
+                    status = "error"
+                    message = failure_message
+                    write_job_state(data_dir, "error", message=failure_message)
+
+        if status == "running":
             try:
-                with open(f"{root_dir}/calculated_structures/{ID}/estimated_time.txt", 'r') as timefile:
+                with open(data_dir / "estimated_time.txt", 'r') as timefile:
                     remaining_seconds = float(timefile.read()) - time()
                     if remaining_seconds < 0:
                         remaining_time = "The calculation is taking longer than usual. If the calculation does not finish soon, please contact us."
@@ -427,10 +594,17 @@ def running_progress():
             status = "not applicable"
             message = "The ID was entered in the wrong format. The ID should be of the form <UniProt code>_<pH>."
         else:
-            if len(code) == 4:
-                response = requests.head(f'https://files.rcsb.org/download/{code}.pdb')
-            else:
-                response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb')
+            try:
+                if len(code) == 4:
+                    response = requests.head(f'https://files.rcsb.org/download/{code}.pdb', timeout=(5, 15))
+                else:
+                    response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v6.pdb', timeout=(5, 15))
+            except requests.RequestException:
+                application.logger.exception("Could not query the structure source for %s", code)
+                return jsonify({"status": "error",
+                                "message": "The structure source is temporarily unavailable.",
+                                "url": "",
+                                "remaining_time": ""}), 503
             if response.status_code != 200:
                 status = "not applicable"
                 message = (f'The structure with code {code} '
@@ -453,7 +627,11 @@ def running_progress():
 @application.route('/api/interactions/<ID>', methods=['GET'])
 def get_interactions(ID: str):
     try:
-        with open(f"{root_dir}/calculated_structures/{ID.upper()}/interrezidual_interactions.json", 'r') as interactions_file:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    try:
+        with open(f"{root_dir}/calculated_structures/{ID}/interrezidual_interactions.json", 'r') as interactions_file:
             interactions = json.load(interactions_file)
         return jsonify(interactions)
     except FileNotFoundError:
@@ -464,7 +642,10 @@ def get_interactions(ID: str):
 
 @application.route('/download_files')
 def download_files():
-    ID = request.args.get('ID').upper()
+    try:
+        ID = normalise_job_id(request.args.get('ID'))
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
     code, ph = ID.split('_')
     if len(code) == 36:
         code = "structure"
@@ -481,25 +662,41 @@ def download_files():
 
 @application.route('/optimised_structure/<ID>')
 def get_optimised_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/optimised.pdb'
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimised.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/original_structure/<ID>')
 def get_original_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/original.pdb'
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    filepath = f'{root_dir}/calculated_structures/{ID}/original.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/residues_logs/<ID>')
 def get_residues_logs(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID.upper()}/residues.logs'
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    filepath = f'{root_dir}/calculated_structures/{ID}/residues.logs'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/differences/<ID>')
 def get_differences(ID: str):
-    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/differences.json"
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    filepath = f"{root_dir}/calculated_structures/{ID}/differences.json"
     try:
         return Response(open(filepath, "r").read(), mimetype="text/json")
     except FileNotFoundError:
@@ -509,7 +706,11 @@ def get_differences(ID: str):
 
 @application.route('/warnings/<ID>')
 def get_tables(ID: str):
-    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/tables.json"
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
+    filepath = f"{root_dir}/calculated_structures/{ID}/tables.json"
     try:
         return Response(open(filepath, "r").read(), mimetype="text/json")
     except FileNotFoundError:
@@ -524,6 +725,10 @@ def page_not_found(error):
 
 @application.route('/pdb_file/<ID>/<file_type>')
 def get_pdb_file(ID: str, file_type: str):
+    try:
+        ID = normalise_job_id(ID)
+    except ValueError as error:
+        return jsonify({"status": "not applicable", "message": str(error)}), 406
     file_mapping = {
         "optimised": "optimised.pdb",
         "original": "original.pdb",
@@ -534,7 +739,7 @@ def get_pdb_file(ID: str, file_type: str):
         return jsonify(
             {"status": "not applicable", "message": f"Unknown file type: {file_type}"}
         ), 404
-    filepath = f"{root_dir}/calculated_structures/{ID.upper()}/{file_mapping[file_type]}"
+    filepath = f"{root_dir}/calculated_structures/{ID}/{file_mapping[file_type]}"
     if not os.path.isfile(filepath):
         return jsonify(
             {"status": "not applicable", "message": f"File not found: {file_type}"}

@@ -1,0 +1,15 @@
+{{- if .Values.podDisruptionBudget.ui.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "proptimus.fullname" . }}-ui
+  labels:
+    {{- include "proptimus.labels" (dict "root" . "component" "ui") | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.ui.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "proptimus.selectorLabels" (dict "root" . "component" "ui") | nindent 6 }}
+{{- end }}
+
+
