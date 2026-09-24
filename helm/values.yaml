@@ -41,15 +41,15 @@ api:
   podAnnotations: {}
   podLabels: {}
   podSecurityContext:
-    fsGroup: 1000
+    fsGroup: 10001
     fsGroupChangePolicy: OnRootMismatch
     seccompProfile:
       type: RuntimeDefault
   containerSecurityContext:
     allowPrivilegeEscalation: false
     runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
+    runAsUser: 10001
+    runAsGroup: 10001
     capabilities:
       drop:
         - ALL
@@ -96,15 +96,15 @@ worker:
   podAnnotations: {}
   podLabels: {}
   podSecurityContext:
-    fsGroup: 1000
+    fsGroup: 10001
     fsGroupChangePolicy: OnRootMismatch
     seccompProfile:
       type: RuntimeDefault
   containerSecurityContext:
     allowPrivilegeEscalation: false
     runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
+    runAsUser: 10001
+    runAsGroup: 10001
     capabilities:
       drop:
         - ALL

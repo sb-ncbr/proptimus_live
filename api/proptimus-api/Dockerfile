@@ -49,8 +49,8 @@ WORKDIR /app
 
 # Create calculated_structures directory
 RUN mkdir -p app/calculated_structures && \
-    groupadd --gid 1000 proptimus && \
-    useradd --uid 1000 --gid 1000 --create-home proptimus && \
+    groupadd --gid 10001 proptimus && \
+    useradd --uid 10001 --gid 10001 --create-home --no-log-init proptimus && \
     chown -R proptimus:proptimus /app
 
 # Environment variables
@@ -64,5 +64,5 @@ EXPOSE 80
 
 # The same image is used by the API Deployment and on-demand worker Jobs.
 # Worker Jobs override this command with: python -m app.worker <job-id>
-USER 1000:1000
+USER 10001:10001
 CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:80", "app.routes:application"]
