@@ -25,5 +25,18 @@ bun run dev
 ```
 Point your browser to localhost:3000/live.
 
+## Running the application in the Docker container
+
+```bash
+# prepare folder for the results
+mkdir calculated_structures
+
+# start containers
+docker compose up
+
+# you can access PROPTIMUS Live by your web browser
+http://localhost:3000
+```
+
 ## License
-MIT
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/sb-ncbr/proptimus_live/blob/master/LICENSE) file for details.
